@@ -19,7 +19,7 @@ namespace Emile.TestApp
 
         // now you can just use if however you like:
 
-
+         
         // allocate a 1 kilobyte block
         var xBlock1 = ReallySimpleAllocator.Allocate(1024);
 
