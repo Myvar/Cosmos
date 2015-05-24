@@ -7,7 +7,7 @@ namespace Emile.TestApp
         public static int* MemStartlocation;
         public static int Length;
 
-        private enum Flags
+        private enum BlockHeaderFlags
         {
             Allocated = 1,
             Free  = 2
@@ -18,7 +18,7 @@ namespace Emile.TestApp
             public int* PreviousBlockPointer { get; set; }
             public int* NextBlockPointer { get; set; }
             public int Size { get; set; }
-            public Flags Flag { get; set; }
+            public BlockHeaderFlags Flag { get; set; }
         }
 
         public static void Initialize(int* startAddress, int length)
@@ -38,7 +38,7 @@ namespace Emile.TestApp
             if (b == 0)//no
             {
                 int* loc = MemStartlocation + 16;//fist block
-                WrightHeader(MemStartlocation, new Header() { NextBlockPointer = loc + length, PreviousBlockPointer = (int*)0, Size = length , Flag = Flags.Allocated});
+                WrightHeader(MemStartlocation, new Header() { NextBlockPointer = loc + length, PreviousBlockPointer = (int*)0, Size = length, Flag = BlockHeaderFlags.Allocated });
                 ret = loc;
             }
             else // yes
