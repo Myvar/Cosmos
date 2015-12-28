@@ -29,7 +29,7 @@ namespace ZorkMachine.Internals
         {
             var a = ReadByte();
             var b = ReadByte();
-            return (short)(b | (a << 8));
+            return (short)(a | (b << 8));
         }
     }
 }

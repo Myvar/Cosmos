@@ -15,8 +15,12 @@ namespace ZorkMachine
             Console.Clear();
             Console.WriteLine("ZorkMachine");
 
-            ZorkStream zs = new ZorkStream(new byte[] { 0X03, 0X20 });
-            Console.WriteLine(zs.ReadShort());
+            Console.WriteLine("Test File: Minizork");
+            Console.WriteLine("File Info:");
+
+            StoryFile f = new StoryFile(new byte[] { 0X03, 0X00, 0X02 });
+            Console.WriteLine(f.ToString());
+                       
         }
 
         protected override void Run()

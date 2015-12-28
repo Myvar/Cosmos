@@ -23,11 +23,19 @@ namespace ZorkMachine.Internals
 
         public byte[] rawData { get; set; }
 
+        public Header Header { get; set; }
         public List<iast> OpCodes { get; set; }
+
 
         public StoryFile(byte[] raw)
         {
             rawData = raw;
+            Header = new Header(raw);
+        }
+
+        public override string ToString()
+        {
+            return "Vertion: " + Header.Vertion;
         }
     }
 }
