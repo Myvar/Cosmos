@@ -35,7 +35,17 @@ namespace ZorkMachine.Internals
 
         public override string ToString()
         {
-            return "Vertion: " + Header.Vertion;
+            return "Vertion: " + Header.Vertion
+                + "\n" + "StatuslineType:" + BoolToString(Header.StatuslineType)
+                + "\n" + "MultipleDisks:" + BoolToString(Header.MultipleDisks)
+                + "\n" + "StatusLineNot:" + BoolToString(Header.StatusLineNot)
+                + "\n" + "ScreenSplitting:" + BoolToString(Header.ScreenSplitting)
+                + "\n" + "variablePitch:" + BoolToString(Header.variablePitch);
+        }
+
+        private string BoolToString(bool b)
+        {
+            return b ? "True" : "False";
         }
     }
 }
