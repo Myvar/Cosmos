@@ -9,7 +9,7 @@ namespace ZorkMachine.Internals
     public  class ZorkStream
     {
         private List<byte> _buffer = new List<byte>();
-        private int _index = -1;
+        public int _index = -1;
 
         public ZorkStream(byte[] raw)
         {
@@ -25,11 +25,23 @@ namespace ZorkMachine.Internals
            return _buffer[_index];
         }
 
+        public byte ReadByte(int addr)
+        {            
+            return _buffer[addr];
+        }
+
         public short ReadShort()
         {
             var a = ReadByte();
             var b = ReadByte();
-            return (short)(a | (b << 8));
+            return (short)((a << 8) | b);
+        }
+
+        public short ReadShort(int addr)
+        {
+            var a = ReadByte(addr);
+            var b = ReadByte(addr + 1);
+            return (short)((a << 8) | b);
         }
     }
 }

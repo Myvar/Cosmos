@@ -40,7 +40,22 @@ namespace ZorkMachine.Internals
                 + "\n" + "MultipleDisks:" + BoolToString(Header.MultipleDisks)
                 + "\n" + "StatusLineNot:" + BoolToString(Header.StatusLineNot)
                 + "\n" + "ScreenSplitting:" + BoolToString(Header.ScreenSplitting)
-                + "\n" + "variablePitch:" + BoolToString(Header.variablePitch);
+                + "\n" + "variablePitch:" + BoolToString(Header.variablePitch)
+                + "\n" + "HighMemory:" + Header.HighMemory
+                + "\n" + "ProgramCounter:" +  Header.ProgramCounter
+                + "\n" + "DictionaryLoc:" + Header.DictionaryLoc
+                + "\n" + "ObjectTableLoc:" + Header.ObjectTableLoc
+                + "\n" + "GlobalVariableLoc:" + Header.GlobalVariableLoc
+                + "\n" + "StaticMemmoryLoc:" + Header.StaticMemmoryLoc
+                + "\n" + "TranscriptingIsOn:" + BoolToString(Header.TranscriptingIsOn)
+                + "\n" + "ForcePitchFont:" + BoolToString(Header.ForcePitchFont)
+                + "\n" + "AbbreviationTableLocation:" + Header.AbbreviationTableLocation
+                + "\n" + "StandardRevisionNumber:" + Header.StandardRevisionNumber;
+        }
+
+        private static char ByteToHexChar(byte b)
+        {            
+            return b < 10 ? (char)(b + 48) : (char)(b + 55);
         }
 
         private string BoolToString(bool b)

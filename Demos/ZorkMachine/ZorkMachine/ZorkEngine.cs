@@ -14,7 +14,7 @@ namespace ZorkMachine
         public byte[] Stack;
 
         //private
-        private int _MemmorySize = 30 * 1000;
+        private int _MemmorySize = 128 * 1000;
         private int _StackSize = 100 * 1000;
 
         private StoryFile _sf;
@@ -35,7 +35,8 @@ namespace ZorkMachine
 
         public void Reset()
         {
-
+            Memmory = new byte[_MemmorySize];
+            Stack = new byte[_StackSize];
         }
 
         private void LoadStoryFile(StoryFile f)

@@ -267,6 +267,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZorkMachine", "..\Demos\Zor
 EndProject
 Project("{471EC4BB-E47E-4229-A789-D1F5F83B52D4}") = "ZorkMachineBoot", "..\Demos\ZorkMachine\ZorkMachine\ZorkMachineBoot.Cosmos", "{EBF38FF4-EB96-45F0-8181-C15DFA2BDDFC}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZorkConsoleTest", "ZorkConsoleTest\ZorkConsoleTest.csproj", "{A4B061A0-949E-4DC8-BD13-F4A6EAFC5A8A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -1454,6 +1456,22 @@ Global
 		{EBF38FF4-EB96-45F0-8181-C15DFA2BDDFC}.Release|Mixed Platforms.Build.0 = Debug|x86
 		{EBF38FF4-EB96-45F0-8181-C15DFA2BDDFC}.Release|x86.ActiveCfg = Debug|x86
 		{EBF38FF4-EB96-45F0-8181-C15DFA2BDDFC}.Release|x86.Build.0 = Debug|x86
+		{A4B061A0-949E-4DC8-BD13-F4A6EAFC5A8A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A4B061A0-949E-4DC8-BD13-F4A6EAFC5A8A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A4B061A0-949E-4DC8-BD13-F4A6EAFC5A8A}.Debug|Itanium.ActiveCfg = Debug|Any CPU
+		{A4B061A0-949E-4DC8-BD13-F4A6EAFC5A8A}.Debug|Itanium.Build.0 = Debug|Any CPU
+		{A4B061A0-949E-4DC8-BD13-F4A6EAFC5A8A}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{A4B061A0-949E-4DC8-BD13-F4A6EAFC5A8A}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{A4B061A0-949E-4DC8-BD13-F4A6EAFC5A8A}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{A4B061A0-949E-4DC8-BD13-F4A6EAFC5A8A}.Debug|x86.Build.0 = Debug|Any CPU
+		{A4B061A0-949E-4DC8-BD13-F4A6EAFC5A8A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A4B061A0-949E-4DC8-BD13-F4A6EAFC5A8A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A4B061A0-949E-4DC8-BD13-F4A6EAFC5A8A}.Release|Itanium.ActiveCfg = Release|Any CPU
+		{A4B061A0-949E-4DC8-BD13-F4A6EAFC5A8A}.Release|Itanium.Build.0 = Release|Any CPU
+		{A4B061A0-949E-4DC8-BD13-F4A6EAFC5A8A}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{A4B061A0-949E-4DC8-BD13-F4A6EAFC5A8A}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{A4B061A0-949E-4DC8-BD13-F4A6EAFC5A8A}.Release|x86.ActiveCfg = Release|Any CPU
+		{A4B061A0-949E-4DC8-BD13-F4A6EAFC5A8A}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -1562,5 +1580,6 @@ Global
 		{1F11FF59-1B8E-4DDF-91FC-379F4A11376C} = {1698DD83-72A3-44CD-B088-4320A4014A95}
 		{B4DA8E21-70AD-40A6-B842-DBF75D83E697} = {1F11FF59-1B8E-4DDF-91FC-379F4A11376C}
 		{EBF38FF4-EB96-45F0-8181-C15DFA2BDDFC} = {1F11FF59-1B8E-4DDF-91FC-379F4A11376C}
+		{A4B061A0-949E-4DC8-BD13-F4A6EAFC5A8A} = {1F11FF59-1B8E-4DDF-91FC-379F4A11376C}
 	EndGlobalSection
 EndGlobal
