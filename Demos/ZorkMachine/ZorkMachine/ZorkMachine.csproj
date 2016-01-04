@@ -40,16 +40,15 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Internals\Header.cs" />
-    <Compile Include="Internals\iast.cs" />
+    <Compile Include="Internals\Opcode.cs" />
     <Compile Include="Internals\StoryFile.cs" />
     <Compile Include="Internals\ZorkStream.cs" />
     <Compile Include="Kernel.cs" />
     <Compile Include="AssemblyInfo.cs" />
+    <Compile Include="minizork_z3.cs" />
     <Compile Include="ZorkEngine.cs" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Internals\Ops\" />
-  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

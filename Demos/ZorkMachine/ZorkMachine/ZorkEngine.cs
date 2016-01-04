@@ -12,6 +12,7 @@ namespace ZorkMachine
         //public
         public byte[] Memmory;
         public byte[] Stack;
+        public int ProgramCounter = 0;
 
         //private
         private int _MemmorySize = 128 * 1000;
@@ -26,11 +27,10 @@ namespace ZorkMachine
         }
 
         public void Execute(byte[] zorkFile)
-        {
-            Reset();
+        {            
             _sf = StoryFile.Read(zorkFile);
             LoadStoryFile(_sf);
-            Resolve(_sf.OpCodes);
+            Step();
         }
 
         public void Reset()
@@ -41,11 +41,15 @@ namespace ZorkMachine
 
         private void LoadStoryFile(StoryFile f)
         {
-
+            _MemmorySize = f.rawData.Length;
+            Reset();
+            Memmory = f.rawData;
+            //TODO: load header data       
+            ProgramCounter = f.Header.ProgramCounter;
         }
 
-        private void Resolve(List<iast> Ops)
-        {
+        private void Step()
+        {          
 
         }
 
