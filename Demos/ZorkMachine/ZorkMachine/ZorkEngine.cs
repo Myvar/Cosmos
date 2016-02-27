@@ -49,8 +49,9 @@ namespace ZorkMachine
         }
 
         private void Step()
-        {          
-
+        {
+            Console.WriteLine("Opcode at PC:");
+            Console.WriteLine(Memmory[ProgramCounter]);
         }
 
     }

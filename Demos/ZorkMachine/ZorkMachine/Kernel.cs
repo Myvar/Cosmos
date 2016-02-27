@@ -20,7 +20,10 @@ namespace ZorkMachine
 
             StoryFile f = new StoryFile(minizork_z3.raw);
             Console.WriteLine(f.ToString());
-                       
+
+
+            ZorkEngine ze = new ZorkEngine();
+            ze.Execute(minizork_z3.raw);        
         }
 
         protected override void Run()
