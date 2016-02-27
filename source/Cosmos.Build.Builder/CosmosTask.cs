@@ -8,16 +8,25 @@ using System.IO;
 using Microsoft.Win32;
 using System.Windows;
 
+public enum BuildState
+{
+    CleanupError,
+    CompilationError,
+    PrerequisiteMissing,
+    Running
+}
 namespace Cosmos.Build.Builder {
   public class CosmosTask : Task {
     protected string mCosmosDir;
     protected string mOutputDir;
+    protected BuildState mBuildState;
     protected string mAppDataDir;
     protected int mReleaseNo;
     protected string mInnoFile;
     protected string mInnoPath;
+    // Instead of throwing every exception, we collect them in a list
+    protected List<string> mExceptionList = new List<string>();
     public string InnoScriptTargetFile = "Current.iss";
-
     public CosmosTask(string aCosmosDir, int aReleaseNo) {
       mCosmosDir = aCosmosDir;
       mAppDataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Cosmos User Kit");
@@ -35,12 +44,10 @@ namespace Cosmos.Build.Builder {
         var setupName = "CosmosUserKit-" + releaseNumber;
         switch (App.VsVersion)
         {
-            case VsVersion.Vs2013:
-                setupName += "-vs2013";
-                break;
             case VsVersion.Vs2015:
                 setupName += "-vs2015";
                 break;
+
         }
 
         if (App.UseVsHive)
@@ -73,31 +80,39 @@ namespace Cosmos.Build.Builder {
       }
     }
 
-    protected override void DoRun() {
+    protected override List<string> DoRun() {
       mOutputDir = Path.Combine(mCosmosDir, @"Build\VSIP");
-
       if (!App.TestMode) {
         CheckPrereqs();                                 //Working
-        CleanupVSIPFolder();
+        // No point in continuing if Prerequisites are missing
+        // Could potentially add more State checks in the future, but for now
+        // only the prerequisites are handled...
+        if (mBuildState != BuildState.PrerequisiteMissing)
+        {
+            CleanupVSIPFolder();
 
-        CompileCosmos();                                //Working
-        CopyTemplates();
-        
-        CreateScriptToUseChangesetWhichTaskIsUse();
+            CompileCosmos();                                //Working
+            CopyTemplates();
 
-        CreateSetup();                                  //Working
-        if (!App.IsUserKit) {
-          CleanupAlreadyInstalled();                      //Working
-          RunSetup();                                 //Working - forgot to run as user kit first
-          WriteDevKit();                              //Working
-          if (!App.DoNotLaunchVS) { LaunchVS(); }     //Working
+            CreateScriptToUseChangesetWhichTaskIsUse();
+
+            CreateSetup();                                  //Working
+            if (!App.IsUserKit)
+            {
+                CleanupAlreadyInstalled();                      //Working
+                RunSetup();                                 //Working - forgot to run as user kit first
+                WriteDevKit();                              //Working
+                if (!App.DoNotLaunchVS) { LaunchVS(); }     //Working
+            }
         }
-
         Done();
       } else {
         Section("Testing...");
         //Uncomment bits that you want to test...
-        CheckForInno(); //CheckPrereqs();                               //Working
+        //CheckForInno();
+        CheckPrereqs();                               //Working
+        if (mBuildState != BuildState.PrerequisiteMissing)
+          Echo("all checks suceeded");
         //Cleanup();                                    //Working
 
         //CompileCosmos();                              //Working
@@ -116,10 +131,11 @@ namespace Cosmos.Build.Builder {
 
         //Done();
       }
+            return mExceptionList;
     }
 
     protected void MsBuild(string aSlnFile, string aBuildCfg) {
-      string xMsBuild = Path.Combine(Paths.Windows, @"Microsoft.NET\Framework\v4.0.30319\msbuild.exe");
+      string xMsBuild = Path.Combine(Paths.ProgFiles32, @"MSBuild\14.0\Bin\msbuild.exe");
       string xParams = Quoted(aSlnFile) + @" /maxcpucount /verbosity:normal /nologo /p:Configuration=" + aBuildCfg + " /p:Platform=x86 /p:OutputPath=" + Quoted(mOutputDir);
       // Clean then build: http://adrianfoyn.wordpress.com/2011/03/30/wrestling-with-msbuild-the-bane-of-trebuild/
       if (false == App.NoMsBuildClean) {
@@ -149,15 +165,21 @@ namespace Cosmos.Build.Builder {
         using (var xKey = Registry.LocalMachine.OpenSubKey(aKey + xSubKey)) {
           string xValue = (string)xKey.GetValue(aValueName);
           if (xValue != null && xValue.ToUpper().Contains(xCheck)) {
-            return true;
+            if (mBuildState != BuildState.PrerequisiteMissing)
+            {
+              mBuildState = BuildState.Running;
+              return true;
+            }
+            else
+              return false;
           }
         }
       }
 
       if (aCanThrow) {
-        NotFound(aCheck);
+         NotFound(aCheck);
       }
-      return false;
+            return false;
     }
 
     protected void CheckNet35Sp1() {
@@ -170,6 +192,7 @@ namespace Cosmos.Build.Builder {
       }
       if (!xInstalled) {
         NotFound(".NET 3.5 SP1");
+        mBuildState = BuildState.PrerequisiteMissing;
       }
     }
 
@@ -193,7 +216,7 @@ namespace Cosmos.Build.Builder {
       // 6.3 Windows 8
       // 6.4 Windows 10
       if (xVer < 6.0m) {
-        NotFound("Minimum Supported OS is Vista/2008");
+         NotFound("Minimum Supported OS is Vista/2008");
       }
     }
 
@@ -209,7 +232,7 @@ namespace Cosmos.Build.Builder {
     protected void CheckIfUserKitRunning() {
       Echo("Check if User Kit Installer is already running.");
       if (NumProcessesContainingName("CosmosUserKit") > 1) {
-        throw new Exception("Another instance of the user kit installer is running.");
+            throw new Exception("Another instance of the user kit installer is running.");
       }
     }
 
@@ -241,7 +264,8 @@ namespace Cosmos.Build.Builder {
     }
 
     protected void NotFound(string aName) {
-      throw new Exception("Prerequisite '" + aName + "' not found.");
+      mExceptionList.Add("Prerequisite '" + aName + "' not found.");
+      mBuildState = BuildState.PrerequisiteMissing;
     }
 
     protected void CheckPrereqs() {
@@ -250,7 +274,8 @@ namespace Cosmos.Build.Builder {
 
       Echo("Checking for x86 run.");
       if (!AmRunning32Bit()) {
-        throw new Exception("Builder must run as x86");
+       mExceptionList.Add("Builder must run as x86");
+       mBuildState = BuildState.PrerequisiteMissing;
       }
 
       // We assume they have normal .NET stuff if user was able to build the builder...
@@ -259,19 +284,18 @@ namespace Cosmos.Build.Builder {
       CheckIfUserKitRunning();
       CheckIsVsRunning();
       CheckIfBuilderRunning();
-      
+
       switch (App.VsVersion) {
-        case VsVersion.Vs2013:
-          CheckVs2013();
-          CheckForInstall("Microsoft Visual Studio 2013 SDK", true);
-          break;
         case VsVersion.Vs2015:
           CheckVs2015();
-          CheckForInstall("Microsoft Visual Studio 2015 RC SDK", true);
+          CheckForInstall("Microsoft Visual Studio 2015 SDK - ENU", true);
           break;
+        default:
+          throw new NotImplementedException();
       }
 
-      //works also without, only close of VMWare is not working! CheckNet35Sp1(); // Required by VMWareLib
+      //works also without, only close of VMWare is not working!
+      CheckNet35Sp1(); // Required by VMWareLib and other stuff
       CheckNet403();
       CheckForInno();
       bool vmWareInstalled = true;
@@ -284,8 +308,9 @@ namespace Cosmos.Build.Builder {
           }
         }
       }
-      if (!vmWareInstalled && !bochsInstalled) { NotFound("VMWare or Bochs"); }
-
+      if (!vmWareInstalled && !bochsInstalled) {
+           NotFound("VMWare or Bochs");
+      }
       // VIX is installed with newer VMware Workstations (8+ for sure). VMware player does not install it?
       // We need to just watch this and adjust as needed.
       //CheckForInstall("VMWare VIX", true);
@@ -329,30 +354,23 @@ namespace Cosmos.Build.Builder {
       Echo("Checking for Inno Setup");
       using (var xKey = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Inno Setup 5_is1", false)) {
         if (xKey == null) {
-          throw new Exception("Cannot find Inno Setup.");
+          mExceptionList.Add("Cannot find Inno Setup.");
+                    mBuildState = BuildState.PrerequisiteMissing;
+                    return;
         }
         mInnoPath = (string)xKey.GetValue("InstallLocation");
         if (string.IsNullOrWhiteSpace(mInnoPath)) {
-          throw new Exception("Cannot find Inno Setup.");
+          mExceptionList.Add("Cannot find Inno Setup.");
+                   mBuildState = BuildState.PrerequisiteMissing;
+                    return;
         }
       }
 
       Echo("Checking for Inno Preprocessor");
       if (!File.Exists(Path.Combine(mInnoPath, "ISPP.dll"))) {
-        throw new Exception("Inno Preprocessor not detected.");
-      }
-    }
-
-    void CheckVs2013() {
-      Echo("Checking for Visual Studio 2013");
-      string key = @"SOFTWARE\Microsoft\VisualStudio\12.0";
-      if (Environment.Is64BitOperatingSystem)
-        key = @"SOFTWARE\Wow6432Node\Microsoft\VisualStudio\12.0";
-      using (var xKey = Registry.LocalMachine.OpenSubKey(key)) {
-        string xDir = (string)xKey.GetValue("InstallDir");
-        if (String.IsNullOrWhiteSpace(xDir)) {
-          throw new Exception("Visual Studio 2013 not detected!");
-        }
+        mExceptionList.Add("Inno Preprocessor not detected.");
+                mBuildState = BuildState.PrerequisiteMissing;
+                return;
       }
     }
 
@@ -364,7 +382,8 @@ namespace Cosmos.Build.Builder {
       using (var xKey = Registry.LocalMachine.OpenSubKey(key)) {
         string xDir = (string)xKey.GetValue("InstallDir");
         if (String.IsNullOrWhiteSpace(xDir)) {
-          throw new Exception("Visual Studio 2015 RC not detected!");
+          mExceptionList.Add("Visual Studio 2015 RC not detected!");
+          mBuildState = BuildState.PrerequisiteMissing;
         }
       }
     }
@@ -372,7 +391,7 @@ namespace Cosmos.Build.Builder {
     void WriteDevKit() {
       Section("Writing Dev Kit to Registry");
 
-      // Inno deletes this from registry, so we must add this after. 
+      // Inno deletes this from registry, so we must add this after.
       // We let Inno delete it, so if user runs it by itself they get
       // only UserKit, and no DevKit settings.
       // HKCU instead of HKLM because builder does not run as admin.
@@ -413,7 +432,7 @@ namespace Cosmos.Build.Builder {
 
       // XSC can do all files in path, but we do it on our own currently for better status updates.
       // When we get xsproj files we can build directly.
-      var xFiles = Directory.GetFiles(mCosmosDir + @"source2\Compiler\Cosmos.Compiler.DebugStub\", "*.xs");
+      var xFiles = Directory.GetFiles(mCosmosDir + @"source\Cosmos.Debug.DebugStub\", "*.xs");
       foreach (var xFile in xFiles) {
         Echo("Compiling " + Path.GetFileName(xFile));
         string xDest = Path.ChangeExtension(xFile, ".cs");
@@ -449,16 +468,15 @@ namespace Cosmos.Build.Builder {
     void CreateSetup() {
       Section("Creating Setup");
 
+
       string xISCC = Path.Combine(mInnoPath, "ISCC.exe");
       if (!File.Exists(xISCC)) {
-        throw new Exception("Cannot find Inno setup.");
+        mExceptionList.Add("Cannot find Inno setup.");
+                return;
       }
       string xCfg = App.IsUserKit ? "UserKit" : "DevKit";
-      string vsVersionConfiguration = "vs2013";
+      string vsVersionConfiguration = "vs2015";
       switch (App.VsVersion) {
-         case VsVersion.Vs2013:
-           vsVersionConfiguration = "vs2013";
-           break;
          case VsVersion.Vs2015:
            vsVersionConfiguration = "vs2015";
            break;
@@ -479,7 +497,8 @@ namespace Cosmos.Build.Builder {
 
       string xVisualStudio = Paths.VSInstall + @"\devenv.exe";
       if (!File.Exists(xVisualStudio)) {
-        throw new Exception("Cannot find Visual Studio.");
+        mExceptionList.Add("Cannot find Visual Studio.");
+                return;
       }
 
       if (App.ResetHive) {
@@ -509,7 +528,8 @@ namespace Cosmos.Build.Builder {
             var xTimed = DateTime.Now;
             Echo("Waiting " + xSeconds + " seconds for Setup to start.");
             if (WaitForStart(setupName, xSeconds * 1000)) {
-                throw new Exception("Setup did not start.");
+                mExceptionList.Add("Setup did not start.");
+                    return;
             }
             Echo("Setup is running. " + DateTime.Now.Subtract(xTimed).ToString(@"ss\.fff"));
 

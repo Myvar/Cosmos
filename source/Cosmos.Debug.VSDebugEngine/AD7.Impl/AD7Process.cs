@@ -125,28 +125,28 @@ namespace Cosmos.Debug.VSDebugEngine
                             break;
 
                         case Windows2Debugger.SetAsmBreak:
-                        {
-                            string xLabel = Encoding.UTF8.GetString(aData);
-                            UInt32 xAddress = mDebugInfoDb.AddressOfLabel(xLabel);
-                            mDbgConnector.SetAsmBreakpoint(xAddress);
-                            mDbgConnector.Continue();
-                        }
+                            {
+                                string xLabel = Encoding.UTF8.GetString(aData);
+                                UInt32 xAddress = mDebugInfoDb.GetAddressOfLabel(xLabel);
+                                mDbgConnector.SetAsmBreakpoint(xAddress);
+                                mDbgConnector.Continue();
+                            }
                             break;
 
                         case Windows2Debugger.ToggleAsmBreak2:
-                        {
-                            string xLabel = Encoding.UTF8.GetString(aData);
-                            UInt32 xAddress = mDebugInfoDb.AddressOfLabel(xLabel);
-                            if (GetASMBreakpointInfoFromASMAddress(xAddress) == null)
                             {
-                                SetASMBreakpoint(xAddress);
+                                string xLabel = Encoding.UTF8.GetString(aData);
+                                UInt32 xAddress = mDebugInfoDb.GetAddressOfLabel(xLabel);
+                                if (GetASMBreakpointInfoFromASMAddress(xAddress) == null)
+                                {
+                                    SetASMBreakpoint(xAddress);
+                                }
+                                else
+                                {
+                                    ClearASMBreakpoint(xAddress);
+                                }
+                                break;
                             }
-                            else
-                            {
-                                ClearASMBreakpoint(xAddress);
-                            }
-                            break;
-                        }
                         case Windows2Debugger.ToggleStepMode:
                             ASMSteppingMode = !ASMSteppingMode;
                             break;
@@ -160,37 +160,37 @@ namespace Cosmos.Debug.VSDebugEngine
                             break;
 
                         case Windows2Debugger.CurrentASMLine:
-                        {
-                            mCurrentASMLine = Encoding.UTF8.GetString(aData);
-                            ASMWindow_CurrentLineUpdated.Set();
-                            break;
-                        }
+                            {
+                                mCurrentASMLine = Encoding.UTF8.GetString(aData);
+                                ASMWindow_CurrentLineUpdated.Set();
+                                break;
+                            }
                         case Windows2Debugger.NextASMLine1:
-                        {
-                            if (aData.Length == 0)
                             {
-                                mNextASMLine1 = null;
-                                mNextAddress1 = null;
+                                if (aData.Length == 0)
+                                {
+                                    mNextASMLine1 = null;
+                                    mNextAddress1 = null;
+                                }
+                                else
+                                {
+                                    mNextASMLine1 = Encoding.UTF8.GetString(aData);
+                                    ASMWindow_NextLine1Updated.Set();
+                                }
+                                break;
                             }
-                            else
-                            {
-                                mNextASMLine1 = Encoding.UTF8.GetString(aData);
-                                ASMWindow_NextLine1Updated.Set();
-                            }
-                            break;
-                        }
                         case Windows2Debugger.NextLabel1:
-                        {
-                            string nextLabel = Encoding.UTF8.GetString(aData);
-                            mNextAddress1 = mDebugInfoDb.AddressOfLabel(nextLabel);
-                            ASMWindow_NextAddress1Updated.Set();
-                            break;
-                        }
-                            //cmd used from assembler window
+                            {
+                                string nextLabel = Encoding.UTF8.GetString(aData);
+                                mNextAddress1 = mDebugInfoDb.GetAddressOfLabel(nextLabel);
+                                ASMWindow_NextAddress1Updated.Set();
+                                break;
+                            }
+                        //cmd used from assembler window
                         case Windows2Debugger.Continue:
                             Step(enum_STEPKIND.STEP_OVER);
                             break;
-                            //cmd used from assembler window
+                        //cmd used from assembler window
                         case Windows2Debugger.AsmStepInto:
                             Step(enum_STEPKIND.STEP_INTO);
                             break;
@@ -203,7 +203,7 @@ namespace Cosmos.Debug.VSDebugEngine
                     throw new NotImplementedException("Sending other channels not yet supported!");
                 }
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 //We cannot afford to silently break the pipe!
                 OutputText("AD7Process UpPipe receive error! " + ex.Message);
@@ -281,7 +281,7 @@ namespace Cosmos.Debug.VSDebugEngine
         {
             mDbgConnector = null;
 
-            string xPort = mDebugInfo[BuildProperties.VisualStudioDebugPortString];
+            string xPort = mDebugInfo[BuildPropertyNames.VisualStudioDebugPortString];
 
             // using (var xDebug = new StreamWriter(@"e:\debug.info", false))
             // {
@@ -294,7 +294,7 @@ namespace Cosmos.Debug.VSDebugEngine
 
             if (String.IsNullOrWhiteSpace(xPort))
             {
-                xPort = mDebugInfo[BuildProperties.CosmosDebugPortString];
+                xPort = mDebugInfo[BuildPropertyNames.CosmosDebugPortString];
             }
 
             var xParts = (null == xPort) ? null : xPort.Split(' ');
@@ -308,7 +308,7 @@ namespace Cosmos.Debug.VSDebugEngine
             string xPortType = xParts[0].ToLower();
             string xPortParam = xParts[1].ToLower();
 
-            var xLaunch = mDebugInfo[BuildProperties.LaunchString];
+            var xLaunch = mDebugInfo[BuildPropertyNames.LaunchString];
 
             OutputText("Starting debug connector.");
             switch (xPortType)
@@ -334,6 +334,9 @@ namespace Cosmos.Debug.VSDebugEngine
             mDbgConnector.CmdBreak += new Action<UInt32>(DbgCmdBreak);
             mDbgConnector.CmdTrace += new Action<UInt32>(DbgCmdTrace);
             mDbgConnector.CmdText += new Action<string>(DbgCmdText);
+            mDbgConnector.CmdSimpleNumber += new Action<uint>(DbgCmdSimpleNumber);
+            mDbgConnector.CmdComplexSingleNumber += new Action<float>(DbgCmdComplexSingleNumber);
+            mDbgConnector.CmdComplexDoubleNumber += new Action<double>(DbgCmdComplexDoubleNumber);
             mDbgConnector.CmdStarted += new Action(DbgCmdStarted);
             mDbgConnector.OnDebugMsg += new Action<string>(DebugMsg);
             mDbgConnector.ConnectionLost += new Action<Exception>(DbgConnector_ConnectionLost);
@@ -372,7 +375,7 @@ namespace Cosmos.Debug.VSDebugEngine
             mCallback = aCallback;
             mDebugInfo = aDebugInfo;
 
-            mLaunch = (LaunchType)Enum.Parse(typeof(LaunchType), aDebugInfo[BuildProperties.LaunchString]);
+            mLaunch = (LaunchType)Enum.Parse(typeof(LaunchType), aDebugInfo[BuildPropertyNames.LaunchString]);
 
             if (mDebugDownPipe == null)
             {
@@ -396,11 +399,11 @@ namespace Cosmos.Debug.VSDebugEngine
             OutputText("Using ISO file " + mISO + ".");
             mProjectFile = mDebugInfo["ProjectFile"];
             //
-            bool xUseGDB = string.Equals(mDebugInfo[BuildProperties.EnableGDBString], "true", StringComparison.InvariantCultureIgnoreCase);
+            bool xUseGDB = string.Equals(mDebugInfo[BuildPropertyNames.EnableGDBString], "true", StringComparison.InvariantCultureIgnoreCase);
             OutputText("GDB " + (xUseGDB ? "Enabled" : "Disabled") + ".");
             //
             var xGDBClient = false;
-            Boolean.TryParse(mDebugInfo[BuildProperties.StartCosmosGDBString], out xGDBClient);
+            Boolean.TryParse(mDebugInfo[BuildPropertyNames.StartCosmosGDBString], out xGDBClient);
 
             switch (mLaunch)
             {
@@ -522,6 +525,21 @@ namespace Cosmos.Debug.VSDebugEngine
                 }
             }
             mDbgConnector.SendCmd(Vs2Ds.BatchEnd);
+        }
+
+        void DbgCmdSimpleNumber(uint nr)
+        {
+            mCallback.OnOutputStringUser("0x" + nr.ToString("X8").ToUpper() + "\r\n");
+        }
+
+        void DbgCmdComplexSingleNumber(float nr)
+        {
+            mCallback.OnOutputStringUser(nr + "\r\n");
+        }
+
+        void DbgCmdComplexDoubleNumber(double nr)
+        {
+            mCallback.OnOutputStringUser(nr + "\r\n");
         }
 
         void DbgCmdText(string obj)

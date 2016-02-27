@@ -18,20 +18,42 @@ namespace Cosmos.Core {
 
         public void Reboot() {
             // Disable all interrupts
-            //DisableInterrupts();
+            DisableInterrupts();
 
-            //byte temp;
-
-            //// Clear all keyboard buffers
-            //do {
-            //    temp = CPUBus.Read8(0x64); // Empty user data
-            //    if ((temp & 0x01) != 0) {
-            //        CPUBus.Read8(0x60); // Empty keyboard data
-            //    }
-            //} while ((temp & 0x02) != 0);
-
-            //CPUBus.Write8(0x64, 0xFE); // Pulse CPU Reset line
+            var myPort = new IOPort(0x64);
+            while ((myPort.Byte & 0x02) != 0)
+            {
+            }
+            myPort.Byte = 0xFE;
             Halt(); // If it didn't work, Halt the CPU
+        }
+
+        private static void DoEnableInterrupts()
+        {
+
+        }
+
+        private static void DoDisableInterrupts()
+        {
+        }
+
+        public static bool mInterruptsEnabled;
+        public static void EnableInterrupts()
+        {
+            mInterruptsEnabled = true;
+            DoEnableInterrupts();
+        }
+
+        /// <summary>
+        /// Returns if the interrupts were actually enabled
+        /// </summary>
+        /// <returns></returns>
+        public static bool DisableInterrupts()
+        {
+            DoDisableInterrupts();
+            var xResult = mInterruptsEnabled;
+            mInterruptsEnabled = false;
+            return xResult;
         }
     }
 }

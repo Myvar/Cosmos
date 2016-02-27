@@ -1,166 +1,260 @@
-﻿//using System;
-//using System.Collections.Generic;
-//using System.IO;
-//using System.Linq;
-//using System.Text;
+﻿using System;
+using System.IO;
 
-//namespace Cosmos.System.FileSystem.FAT
-//{
-//    public class FatStream : Stream
-//    {
-//        protected readonly Listing.FatFile mFile;
-//        protected readonly FatFileSystem mFS = null;
-//        protected byte[] mReadBuffer;
-//        //TODO: In future we might read this in as needed rather than
-//        // all at once. This structure will also consume 2% of file size in RAM 
-//        // (for default cluster size of 2kb, ie 4 bytes per cluster)
-//        // so we might consider a way to flush it and only keep parts.
-//        // Example, a 100 MB file will require 2MB for this structure. That is
-//        // probably acceptable for the mid term future.
-//        protected List<UInt64> mFatTable;
-//        protected UInt64? mReadBufferPosition;
+using Cosmos.Debug.Kernel;
+using Cosmos.System.FileSystem.FAT.Listing;
 
-//        public FatStream(Listing.FatFile aFile)
-//        {
-//            mFile = aFile;
-//            mFS = mFile.FileSystem;
-//            mReadBuffer = mFile.FileSystem.NewClusterArray();
+namespace Cosmos.System.FileSystem.FAT
+{
+    internal class FatStream : Stream
+    {
+        private readonly FatDirectoryEntry mDirectoryEntry;
 
-//            if (mFile.Size > 0)
-//            {
-//                mFatTable = mFile.GetFatTable();
-//            }
-//        }
+        private readonly FatFileSystem mFS;
 
-//        public override bool CanSeek
-//        {
-//            get { return true; }
-//        }
+        protected byte[] mReadBuffer;
 
-//        public override bool CanRead
-//        {
-//            get { return true; }
-//        }
+        //TODO: In future we might read this in as needed rather than
+        // all at once. This structure will also consume 2% of file size in RAM 
+        // (for default cluster size of 2kb, ie 4 bytes per cluster)
+        // so we might consider a way to flush it and only keep parts.
+        // Example, a 100 MB file will require 2MB for this structure. That is
+        // probably acceptable for the mid term future.
+        private ulong[] mFatTable;
 
-//        public override bool CanWrite
-//        {
-//            get { return false; }
-//        }
+        protected ulong? mReadBufferPosition;
 
-//        public override long Length
-//        {
-//            get { return (long)mFile.Size; }
-//        }
+        protected ulong mPosition;
 
-//        protected UInt64 mPosition;
-//        public override long Position
-//        {
-//            get
-//            {
-//                return (long)mPosition;
-//            }
-//            set
-//            {
-//                if (value < 0L)
-//                {
-//                    throw new ArgumentOutOfRangeException("value");
-//                }
-//                mPosition = (ulong)value;
-//            }
-//        }
+        private ulong mSize;
 
-//        public override int Read(byte[] aBuffer, int aOffset, int aCount)
-//        {
-//            return Read(aBuffer, (Int64)aOffset, (Int64)aCount);
-//        }
+        public FatStream(FatDirectoryEntry aEntry)
+        {
+            Global.mFileSystemDebugger.SendInternal($"FatStream with entry {aEntry}");
 
-//        public int Read(byte[] aBuffer, Int64 aOffset, Int64 aCount)
-//        {
-//            if (aCount < 0)
-//            {
-//                throw new ArgumentOutOfRangeException("aCount");
-//            }
-//            if (aOffset < 0)
-//            {
-//                throw new ArgumentOutOfRangeException("aOffset");
-//            }
-//            if (aBuffer == null || aBuffer.Length - aOffset < aCount)
-//            {
-//                throw new ArgumentException("Invalid offset length!");
-//            }
-//            if (mFile.FirstClusterNum == 0)
-//            {
-//                // FirstSector can be 0 for 0 length files
-//                return 0;
-//            }
-//            if (mPosition == mFile.Size)
-//            {
-//                // EOF
-//                return 0;
-//            }
+            mDirectoryEntry = aEntry;
+            mFS = mDirectoryEntry.GetFileSystem();
+            mSize = mDirectoryEntry.mSize;
 
-//            // reduce count, so that no out of bound exception occurs if not existing
-//            // entry is used in line mFS.ReadCluster(mFatTable[(int)xClusterIdx], xCluster);
-//            ulong xMaxReadableBytes = mFile.Size - mPosition;
-//            ulong xCount = (ulong)aCount;
-//            if (xCount > xMaxReadableBytes)
-//            {
-//                xCount = xMaxReadableBytes;
-//            }
+            Global.mFileSystemDebugger.SendInternal("FatStream with mSize {mSize}");
 
-//            var xCluster = mFS.NewClusterArray();
-//            UInt32 xClusterSize = mFS.BytesPerCluster;
+            Global.mFileSystemDebugger.SendInternal("Getting FatTable");
+            // We get always the FatTable if the file is empty too
+                mFatTable = mDirectoryEntry.GetFatTable();
+            // What to do if this should happen? Throw exception?
+            if (mFatTable == null)
+            {
+                Global.mFileSystemDebugger.SendInternal("FatTable got but it is null!");
+            }
+        }
 
-//            while (xCount > 0)
-//            {
-//                UInt64 xClusterIdx = mPosition / xClusterSize;
-//                UInt64 xPosInCluster = mPosition % xClusterSize;
-//                mFS.ReadCluster((ulong)mFatTable[(int)xClusterIdx], xCluster);
-//                long xReadSize;
-//                if (xPosInCluster + xCount > xClusterSize)
-//                {
-//                    xReadSize = (long)(xClusterSize - xPosInCluster - 1);
-//                }
-//                else
-//                {
-//                    xReadSize = (long)xCount;
-//                }
-//                // no need for a long version, because internal Array.Copy() does a cast down to int, and a range check,
-//                // or we do a semantic change here
-//                Array.Copy(xCluster, (long)xPosInCluster, aBuffer, aOffset, xReadSize);
+        public override bool CanSeek
+        {
+            get
+            {
+                return true;
+            }
+        }
 
-//                aOffset += xReadSize;
-//                xCount -= (ulong)xReadSize;
-//                xCount = 0;
-//            }
+        public override bool CanRead
+        {
+            get
+            {
+                return true;
+            }
+        }
 
-//            mPosition += (ulong)aOffset;
-//            return (int)aOffset;
-//        }
+        public override bool CanWrite
+        {
+            get
+            {
+                return true;
+            }
+        }
 
-//        public override void Flush()
-//        {
-//            throw new NotImplementedException();
-//        }
+        public sealed override long Length
+        {
+            get
+            {
+                if (mDirectoryEntry == null)
+                {
+                    throw new NullReferenceException("The stream does not currently have an open entry.");
+                }
+                Global.mFileSystemDebugger.SendInternal($"FatStream.get_Length : Length = {(long)mSize}");
+                return (long)mSize;
+            }
+        }
 
-//        public override long Seek(long offset, SeekOrigin origin)
-//        {
-//            throw new NotImplementedException();
-//        }
+        public override long Position
+        {
+            get
+            {
+                Global.mFileSystemDebugger.SendInternal($"FatStream.get_Position : Position = {(long)mPosition}");
+                return (long)mPosition;
+            }
+            set
+            {
+                if (value < 0L)
+                {
+                    throw new ArgumentOutOfRangeException("value");
+                }
+                Global.mFileSystemDebugger.SendInternal($"FatStream.set_Position : Position = {(long)value}");
+                mPosition = (ulong)value;
+            }
+        }
 
-//        public override void SetLength(long value)
-//        {
-//            throw new NotImplementedException();
-//        }
+        public override int Read(byte[] aBuffer, int aOffset, int aCount)
+        {
+            return Read(aBuffer, aOffset, aCount);
+        }
 
-//        public override void Write(byte[] aBuffer, int aOffset, int aCount)
-//        {
-//            Write(aBuffer, (long)aOffset, (long)aCount);
-//        }
+        protected int Read(byte[] aBuffer, long aOffset, long aCount)
+        {
+            if (aCount < 0)
+            {
+                throw new ArgumentOutOfRangeException("aCount");
+            }
+            if (aOffset < 0)
+            {
+                throw new ArgumentOutOfRangeException("aOffset");
+            }
+            if (aBuffer == null || aBuffer.Length - aOffset < aCount)
+            {
+                throw new ArgumentException("Invalid offset length!");
+            }
+            if (mFatTable.Length == 0 || mFatTable[0] == 0)
+            {
+                // FirstSector can be 0 for 0 length files
+                return 0;
+            }
+            if (mPosition == mDirectoryEntry.mSize)
+            {
+                // EOF
+                return 0;
+            }
 
-//        public void Write(byte[] buffer, long offset, long count)
-//        {
-//            throw new NotImplementedException();
-//        }
-//    }
-//}
+            Global.mFileSystemDebugger.SendInternal($"FatStream.Read : aBuffer.Length = {aBuffer.Length}, aOffset = {aOffset}, aCount = {aCount}");
+
+            // reduce count, so that no out of bound exception occurs if not existing
+            // entry is used in line mFS.ReadCluster(mFatTable[(int)xClusterIdx], xCluster);
+            ulong xMaxReadableBytes = mDirectoryEntry.mSize - mPosition;
+            ulong xCount = (ulong)aCount;
+            if (xCount > xMaxReadableBytes)
+            {
+                xCount = xMaxReadableBytes;
+            }
+
+            var xCluster = mFS.NewClusterArray();
+            uint xClusterSize = mFS.BytesPerCluster;
+
+            while (xCount > 0)
+            {
+                ulong xClusterIdx = mPosition / xClusterSize;
+                ulong xPosInCluster = mPosition % xClusterSize;
+                mFS.Read(mFatTable[(int)xClusterIdx], out xCluster);
+                long xReadSize;
+                if (xPosInCluster + xCount > xClusterSize)
+                {
+                    xReadSize = (long)(xClusterSize - xPosInCluster - 1);
+                }
+                else
+                {
+                    xReadSize = (long)xCount;
+                }
+                // no need for a long version, because internal Array.Copy() does a cast down to int, and a range check,
+                // or we do a semantic change here
+                Array.Copy(xCluster, (long)xPosInCluster, aBuffer, aOffset, xReadSize);
+
+                aOffset += xReadSize;
+                xCount -= (ulong)xReadSize;
+            }
+
+            mPosition += (ulong)aOffset;
+            return (int)aOffset;
+        }
+
+        public override void Flush()
+        {
+            Global.mFileSystemDebugger.SendInternal($"FatStream.Flush");
+            throw new NotImplementedException();
+        }
+
+        public override long Seek(long offset, SeekOrigin origin)
+        {
+            Global.mFileSystemDebugger.SendInternal($"FatStream.Seek : aOffset = {offset}, origin = {origin}");
+            throw new NotImplementedException();
+        }
+
+        public override void SetLength(long value)
+        {
+            Global.mFileSystemDebugger.SendInternal($"FatStream.SetLength : value = {value}");
+            mDirectoryEntry.SetSize(value);
+            mSize = (ulong)value;
+        }
+
+        public override void Write(byte[] aBuffer, int aOffset, int aCount)
+        {
+            Write(aBuffer, aOffset, aCount);
+        }
+
+        protected void Write(byte[] aBuffer, long aOffset, long aCount)
+        {
+            Global.mFileSystemDebugger.SendInternal($"Write() called aCount = {aCount}, aOffset = {aOffset}");
+            if (aCount < 0)
+            {
+                throw new ArgumentOutOfRangeException("aCount");
+            }
+            if (aOffset < 0)
+            {
+                throw new ArgumentOutOfRangeException("aOffset");
+            }
+            if (aBuffer == null || aBuffer.Length - aOffset < aCount)
+            {
+                throw new ArgumentException("Invalid offset length!");
+            }
+
+            Global.mFileSystemDebugger.SendInternal($"FatStream.Write : aBuffer.Length = {aBuffer.Length}, aOffset = {aOffset}, aCount = {aCount}");
+            ulong xCount = (ulong)aCount;
+            var xCluster = mFS.NewClusterArray();
+            uint xClusterSize = mFS.BytesPerCluster;
+
+            long xTotalLength = (long)(mPosition + xCount);
+            if (xTotalLength > Length)
+            {
+                SetLength(xTotalLength);
+            }
+
+            while (xCount > 0)
+            {
+                long xWriteSize;
+                ulong xClusterIdx = mPosition / xClusterSize;
+                ulong xPosInCluster = mPosition % xClusterSize;
+                if (xPosInCluster + xCount > xClusterSize)
+                {
+                    xWriteSize = (long)(xClusterSize - xPosInCluster - 1);
+                }
+                else
+                {
+                    xWriteSize = (long)xCount;
+                }
+
+                mFS.Read(xClusterIdx, out xCluster);
+
+                Global.mFileSystemDebugger.SendInternal($"Writing to cluster idx {xClusterIdx}");
+                Global.mFileSystemDebugger.SendInternal($"Writing to pos in cluster {xPosInCluster}");
+                Global.mFileSystemDebugger.SendInternal($"Offset {aOffset}");
+                Global.mFileSystemDebugger.SendInternal($"First byte {aBuffer[0]}");
+
+                Array.Copy(aBuffer, aOffset, xCluster, (long)xPosInCluster, xWriteSize);
+
+                mFS.Write(mFatTable[(int)xClusterIdx], xCluster);
+                Global.mFileSystemDebugger.SendInternal("Data written");
+
+                aOffset += xWriteSize;
+                xCount -= (ulong)xWriteSize;
+            }
+
+            mPosition += (ulong)aOffset;
+        }
+    }
+}

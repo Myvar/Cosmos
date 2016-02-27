@@ -6,13 +6,27 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Cosmos.Build.Common;
 
 namespace Cosmos.TestRunner.Core
 {
     public partial class Engine
     {
         // configuration: in process eases debugging, but means certain errors (like stack overflow) kill the test runner.
-        public const bool RunIL2CPUInProcess = false;
+        public bool RunIL2CPUInProcess = false;
+        public bool RunWithGDB = false;
+        public bool StartBochsDebugGui = false;
+        public bool EnableStackCorruptionChecks = true;
+        public TraceAssemblies TraceAssembliesLevel = TraceAssemblies.User;
+        public StackCorruptionDetectionLevel StackCorruptionChecksLevel = StackCorruptionDetectionLevel.MethodFooters;
+
+        public List<string> KernelsToRun
+        {
+            get
+            {
+                return mKernelsToRun;
+            }
+        }
 
         private List<string> mKernelsToRun = new List<string>();
         public void AddKernel(string assemblyFile)
@@ -26,18 +40,24 @@ namespace Cosmos.TestRunner.Core
 
         private string mBaseWorkingDirectory;
 
-        public OutputHandlerBase OutputHandler;
+        public OutputHandlerBasic OutputHandler;
 
-        public void Execute()
+        public bool Execute()
         {
             if (OutputHandler == null)
             {
                 throw new InvalidOperationException("No OutputHandler set!");
             }
 
+            if (RunTargets.Count == 0)
+            {
+                RunTargets.AddRange((RunTargetEnum[])Enum.GetValues(typeof(RunTargetEnum)));
+            }
+
             OutputHandler.ExecutionStart();
             try
             {
+                var xResult = true;
                 foreach (var xConfig in GetRunConfigurations())
                 {
                     OutputHandler.RunConfigurationStart(xConfig);
@@ -52,7 +72,7 @@ namespace Cosmos.TestRunner.Core
                             }
                             Directory.CreateDirectory(mBaseWorkingDirectory);
 
-                            ExecuteKernel(xAssemblyFile, xConfig);
+                            xResult &= ExecuteKernel(xAssemblyFile, xConfig);
                         }
                     }
                     catch (Exception e)
@@ -64,10 +84,12 @@ namespace Cosmos.TestRunner.Core
                         OutputHandler.RunConfigurationEnd(xConfig);
                     }
                 }
+                return xResult;
             }
             catch (Exception E)
             {
                 OutputHandler.UnhandledException(E);
+                return false;
             }
             finally
             {
@@ -80,8 +102,11 @@ namespace Cosmos.TestRunner.Core
 
         private IEnumerable<RunConfiguration> GetRunConfigurations()
         {
-            yield return new RunConfiguration {IsELF = true};
-            //yield return new RunConfiguration {IsELF = false};
+            foreach (RunTargetEnum xTarget in RunTargets)
+            {
+                yield return new RunConfiguration { IsELF = true, RunTarget = xTarget };
+                //yield return new RunConfiguration { IsELF = false, RunTarget = xTarget };
+            }
         }
     }
 }

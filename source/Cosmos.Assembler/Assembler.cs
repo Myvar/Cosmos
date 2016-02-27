@@ -11,6 +11,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Xml;
 using Cosmos.Assembler.x86;
+using Cosmos.Debug.DebugStub;
 
 namespace Cosmos.Assembler {
   public class Assembler {
@@ -354,15 +355,15 @@ namespace Cosmos.Assembler {
         SetIdtDescriptor(1, "DebugStub_TracerEntry", false);
         SetIdtDescriptor(3, "DebugStub_TracerEntry", false);
 
-        for (int i = 0; i < 256; i++)
-        {
-          if (i == 1 || i == 3)
-          {
-            continue;
-          }
+        //for (int i = 0; i < 256; i++)
+        //{
+        //  if (i == 1 || i == 3)
+        //  {
+        //    continue;
+        //  }
 
-          SetIdtDescriptor(i, "DebugStub_Interrupt_" + i.ToString(), true);
-        }
+        //  SetIdtDescriptor(i, "DebugStub_Interrupt_" + i.ToString(), true);
+        //}
       }
       //SetIdtDescriptor(1, "DebugStub_INT0"); - Change to GPF
 
@@ -374,9 +375,15 @@ namespace Cosmos.Assembler {
         DestinationDisplacement = 2,
         SourceRef = Cosmos.Assembler.ElementReference.New("_NATIVE_IDT_Contents")
       };
-      new Mov { DestinationReg = Registers.EAX, SourceRef = Cosmos.Assembler.ElementReference.New("_NATIVE_IDT_Pointer") };
-      new Lidt { DestinationReg = Registers.EAX, DestinationIsIndirect = true };
 
+      new Mov { DestinationReg = Registers.EAX, SourceRef = Cosmos.Assembler.ElementReference.New("_NATIVE_IDT_Pointer") };
+
+      if (mComPort > 0)
+      {
+        new Mov {DestinationRef = ElementReference.New("static_field__Cosmos_Core_CPU_mInterruptsEnabled"), DestinationIsIndirect = true, SourceValue = 1};
+        new Lidt {DestinationReg = Registers.EAX, DestinationIsIndirect = true};
+      }
+      new Label("AfterCreateIDT");
       new Comment(this, "END - Create IDT");
     }
 
@@ -436,7 +443,7 @@ namespace Cosmos.Assembler {
 
       // CLI ASAP
       WriteDebugVideo("Clearing interrupts.");
-      new ClrInterruptFlag();
+      new ClearInterruptFlag();
 
 
       WriteDebugVideo("Begin multiboot info.");
@@ -461,6 +468,9 @@ namespace Cosmos.Assembler {
       new LiteralAssemblerCode("%endif");
       WriteDebugVideo("Creating GDT.");
       CreateGDT();
+
+      WriteDebugVideo("Configuring PIC");
+      ConfigurePIC();
 
       WriteDebugVideo("Creating IDT.");
       CreateIDT();
@@ -505,19 +515,60 @@ namespace Cosmos.Assembler {
 
       new Comment(this, "Kernel done - loop till next IRQ");
       new Label(".loop");
-      new ClrInterruptFlag();
+      new ClearInterruptFlag();
       new Halt();
       new Jump { DestinationLabel = ".loop" };
 
       if (mComPort > 0) {
         var xGen = new XSharp.Compiler.AsmGenerator();
-        foreach (var xFile in Directory.GetFiles(Cosmos.Build.Common.CosmosPaths.DebugStubSrc, "*.xs")) {
-          var xAsm = xGen.Generate(xFile);
-          foreach (var xData in xAsm.Data) {
-            Cosmos.Assembler.Assembler.CurrentInstance.DataMembers.Add(new DataMember() { RawAsm = xData });
+
+        var xGenerateAssembler =
+          new Action<object>(i =>
+                             {
+                               XSharp.Nasm.Assembler xAsm;
+                               if (i is StreamReader)
+                               {
+                                 xAsm = xGen.Generate((StreamReader)i);
+                               }
+                               else if (i is string)
+                               {
+                                 xAsm = xGen.Generate((string)i);
+                               }
+                               else
+                               {
+                                 throw new Exception("Object type '" + i.ToString() + "' not supported!");
+                               }
+                               foreach (var xData in xAsm.Data)
+                               {
+                                 Cosmos.Assembler.Assembler.CurrentInstance.DataMembers.Add(new DataMember() {RawAsm = xData});
+                               }
+                               foreach (var xCode in xAsm.Code)
+                               {
+                                 new LiteralAssemblerCode(xCode);
+                               }
+                             });
+        if (ReadDebugStubFromDisk)
+        {
+          foreach (var xFile in Directory.GetFiles(Cosmos.Build.Common.CosmosPaths.DebugStubSrc, "*.xs"))
+          {
+            xGenerateAssembler(xFile);
           }
-          foreach (var xCode in xAsm.Code) {
-            new LiteralAssemblerCode(xCode);
+        }
+        else
+        {
+          foreach (var xManifestName in typeof(ReferenceHelper).Assembly.GetManifestResourceNames())
+          {
+            if (!xManifestName.EndsWith(".xs", StringComparison.OrdinalIgnoreCase))
+            {
+              continue;
+            }
+            using (var xStream = typeof(ReferenceHelper).Assembly.GetManifestResourceStream(xManifestName))
+            {
+              using (var xReader = new StreamReader(xStream))
+              {
+                xGenerateAssembler(xReader);
+              }
+            }
           }
         }
         OnAfterEmitDebugStub();
@@ -528,6 +579,70 @@ namespace Cosmos.Assembler {
       // Start emitting assembly labels
       Cosmos.Assembler.Assembler.CurrentInstance.EmitAsmLabels = true;
     }
+
+    private void ConfigurePIC()
+    {
+      // initial configuration of PIC
+      const byte PIC1 = 0x20;		/* IO base address for master PIC */
+      const byte PIC2 = 0xA0;		/* IO base address for slave PIC */
+      const byte PIC1_COMMAND = PIC1;
+      const byte PIC1_DATA = (PIC1 + 1);
+      const byte PIC2_COMMAND = PIC2;
+      const byte PIC2_DATA = (PIC2 + 1);
+
+      const byte ICW1_ICW4 = 0x01;/* ICW4 (not) needed */
+      const byte ICW1_SINGLE = 0x02;	/* Single (cascade) mode */
+      const byte ICW1_INTERVAL4 = 0x04;	/* Call address interval 4 (8) */
+      const byte ICW1_LEVEL = 0x08;	/* Level triggered (edge) mode */
+      const byte ICW1_INIT = 0x10;	/* Initialization - required! */
+
+      const byte ICW4_8086 = 0x01;	/* 8086/88 (MCS-80/85) mode */
+      const byte ICW4_AUTO = 0x02;	/* Auto (normal) EOI */
+      const byte ICW4_BUF_SLAVE = 0x08;	/* Buffered mode/slave */
+      const byte ICW4_BUF_MASTER = 0x0C;	/* Buffered mode/master */
+      const byte ICW4_SFNM = 0x10; /* Special fully nested (not) */
+
+      // emit helper functions:
+      Action<byte, byte> xOutBytes = (port, value) =>
+                                     {
+                                       new Mov {DestinationReg = RegistersEnum.DX, SourceValue = port};
+                                       new Mov {DestinationReg = RegistersEnum.EAX, SourceValue = value};
+                                       new Out {DestinationReg = RegistersEnum.AL};
+                                     };
+
+      Action xIOWait = () =>
+                       {
+                         xOutBytes(0x80, 0x22);
+                       };
+
+      xOutBytes(PIC1_COMMAND, ICW1_INIT + ICW1_ICW4);  // starts the initialization sequence (in cascade mode)
+      xIOWait();
+      xOutBytes(PIC2_COMMAND, ICW1_INIT + ICW1_ICW4);
+      xIOWait();
+      xOutBytes(PIC1_DATA, 0x20);                 // ICW2: Master PIC vector offset
+      xIOWait();
+      xOutBytes(PIC2_DATA, 0x29);                 // ICW2: Slave PIC vector offset
+      xIOWait();
+      xOutBytes(PIC1_DATA, 4);                       // ICW3: tell Master PIC that there is a slave PIC at IRQ2 (0000 0100)
+      xIOWait();
+      xOutBytes(PIC2_DATA, 2);                       // ICW3: tell Slave PIC its cascade identity (0000 0010)
+      xIOWait();
+
+      xOutBytes(PIC1_DATA, ICW4_8086);
+      xIOWait();
+      xOutBytes(PIC2_DATA, ICW4_8086);
+      xIOWait();
+
+      // for now, we don't want any irq's enabled:
+      xOutBytes(PIC1_DATA, 0xFF);   // restore saved masks.
+      xOutBytes(PIC2_DATA, 0xFF);
+    }
+
+    /// <summary>
+    /// Setting this field to false means the .xs files for the debug stub are read from the DebugStub assembly.
+    /// This allows the automated kernel tester to use the live ones, instead of the installed ones.
+    /// </summary>
+    public static bool ReadDebugStubFromDisk = true;
 
     protected virtual void OnAfterEmitDebugStub()
     {

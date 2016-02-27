@@ -218,6 +218,12 @@ namespace Cosmos.IL2CPU.ILOpCodes {
           {
             return;
           }
+          if ((StackPopTypes[0] == typeof(IntPtr)
+               || StackPopTypes[0] == typeof(UIntPtr))
+              & expectedType.IsPointer)
+          {
+            return;
+          }
           throw new Exception("Wrong Poptype encountered! (Type = " + StackPopTypes[0].FullName + ", expected = " + expectedType.FullName + ")");
         case Code.Ldfld:
           if (StackPopTypes[0] == null)
@@ -235,7 +241,11 @@ namespace Cosmos.IL2CPU.ILOpCodes {
           {
             return;
           }
-          throw new Exception("Wrong Poptype encountered! (Type = " + StackPopTypes[0].FullName + ")");
+          if (StackPopTypes[0] == Value.DeclaringType)
+          {
+            return;
+          }
+          throw new Exception("Wrong Poptype encountered! (Type = " + StackPopTypes[0].FullName + ", expected = " + Value.DeclaringType.FullName + ")");
       }
     }
   }

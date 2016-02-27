@@ -58,3 +58,6 @@ const Ds2Vs_BreakPointAsm = 14
 const Ds2Vs_StackCorruptionOccurred = 15
 const Ds2Vs_MessageBox = 16
 const Ds2Vs_NullReferenceOccurred = 17
+const Ds2Vs_SimpleNumber = 18
+const Ds2Vs_ComplexSingleNumber = 19
+const Ds2Vs_ComplexDoubleNumber = 20

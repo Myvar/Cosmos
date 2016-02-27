@@ -29,22 +29,11 @@ namespace GuessKernel
 
     private Debugger mDebugger = new Debugger("User", "Guess");
 
-    private class KVPClass
-    {
-      public int Key;
-      public int Value;
-    }
-
-    private struct KVPStruct
-    {
-      public int Key;
-      public int Value;
-    }
-
     protected override void Run()
     {
       mCount++;
 
+        mDebugger.Send("");
       mDebugger.SendMessage("Kernel", "New iteration");
       Console.WriteLine();
       Console.WriteLine("Guess #" + mCount);

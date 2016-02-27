@@ -1,4 +1,5 @@
 ﻿using System;
+using Cosmos.Debug.Kernel;
 using Cosmos.HAL;
 
 namespace Cosmos.System
@@ -9,7 +10,7 @@ namespace Cosmos.System
     /// </summary>
     public abstract class Kernel
     {
-        public readonly Debug.Kernel.Debugger Dbg = new Debug.Kernel.Debugger("User", "");
+        public readonly Debugger mDebugger = new Debugger("User", "Kernel");
 
         public bool ClearScreen = true;
 
@@ -29,49 +30,70 @@ namespace Cosmos.System
             return null;
         }
 
+
         /// <summary>
         /// Start the system up using the properties for configuration.
         /// </summary>
-        public virtual void Start() {
-            try {
-                Global.Dbg.Send("Starting kernel");
-                if (mStarted) {
-                    Global.Dbg.Send("ERROR: Kernel Already Started");
+        public virtual void Start()
+        {
+            try
+            {
+                Global.mDebugger.Send("Starting kernel");
+                if (mStarted)
+                {
+                    Global.mDebugger.Send("ERROR: Kernel Already Started");
                     throw new Exception("Kernel has already been started. A kernel cannot be started twice.");
                 }
                 mStarted = true;
 
-                if (String.Empty == null) {
+                if (string.Empty == null)
+                {
                     throw new Exception("Compiler didn't initialize System.String.Empty!");
                 }
 
-                Global.Dbg.Send("HW Bootstrap Init");
+                Global.mDebugger.Send("HW Bootstrap Init");
                 HAL.Bootstrap.Init();
 
-                Global.Dbg.Send("Global Init");
+                Global.mDebugger.Send("Global Init");
                 Global.Init(GetTextScreen(), GetKeyboard());
 
                 // Provide the user with a clear screen if they requested it
-                if (ClearScreen) {
-                    Global.Dbg.Send("Cls");
+                if (ClearScreen)
+                {
+                    Global.mDebugger.Send("Cls");
                     //Global.Console.Clear();
                 }
 
-                Global.Dbg.Send("Before Run");
+                Global.mDebugger.Send("Before Run");
                 BeforeRun();
 
-                Global.Dbg.Send("Run");
-                while (!mStopped) {
-                    //Network.NetworkStack.Update();
-                    Run();
-                }
+                // now enable interrupts:
+                HAL.Global.EnableInterrupts();
 
+                Global.mDebugger.Send("Run");
+                if (mStopped)
+                {
+                    Global.mDebugger.Send("Already stopped");
+                }
+                else
+                {
+                    Global.mDebugger.Send("Not yet stopped");
+                }
+                while (!mStopped)
+                {
+                    //Network.NetworkStack.Update();
+                    Global.mDebugger.Send("Really before Run");
+                    Run();
+                    Global.mDebugger.Send("Really after Run");
+                }
+                Global.mDebugger.Send("AfterRun");
                 AfterRun();
                 //bool xTest = 1 != 3;
                 //while (xTest) {
                 //}
             }
-            catch (Exception E) {
+            catch (Exception E)
+            {
                 // todo: better ways to handle?
                 global::System.Console.WriteLine("Exception occurred while running kernel:");
                 global::System.Console.WriteLine(E.ToString());
@@ -96,19 +118,32 @@ namespace Cosmos.System
         /// <summary>
         /// Shut down the system and power off
         /// </summary>
-        public void Stop() {
+        public void Stop()
+        {
             mStopped = true;
         }
 
-        public Kernel() { }
+        public Kernel()
+        {
+            Debugger.DoSend("In Cosmos.System.Kernel..ctor");
+        }
 
         // Shutdown and restart
-        public void Restart() {
+        public void Restart()
+        {
         }
 
         public static void PrintDebug(string message)
         {
-            Global.Dbg.Send(message);
+            Global.mDebugger.Send(message);
+        }
+
+        public static bool InterruptsEnabled
+        {
+            get
+            {
+                return HAL.Global.InterruptsEnabled;
+            }
         }
     }
 }

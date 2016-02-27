@@ -1,4 +1,4 @@
-; Generated at 14-2-2015 16:16:41
+; Generated at 1/16/2016 12:38:42 PM
 
 
 
@@ -149,6 +149,8 @@ mov dword [static_field__Cosmos_Core_INTs_mLastKnownAddress], DebugStub_SendTrac
 Ret
 
 DebugStub_SendText:
+Push EBP
+Mov EBP, ESP
 Pushad
 Mov AL, DebugStub_Const_Ds2Vs_Message
 Call DebugStub_ComWriteAL
@@ -170,8 +172,61 @@ Jmp DebugStub_SendText_WriteChar
 
 DebugStub_SendText_Finalize:
 Popad
+Pop EBP
 DebugStub_SendText_Exit:
 mov dword [static_field__Cosmos_Core_INTs_mLastKnownAddress], DebugStub_SendText_Exit
+Ret
+
+DebugStub_SendSimpleNumber:
+Push EBP
+Mov EBP, ESP
+Pushad
+Mov AL, DebugStub_Const_Ds2Vs_SimpleNumber
+Call DebugStub_ComWriteAL
+
+Mov EAX, [EBP + 8]
+Call DebugStub_ComWriteEAX
+
+Popad
+Pop EBP
+DebugStub_SendSimpleNumber_Exit:
+mov dword [static_field__Cosmos_Core_INTs_mLastKnownAddress], DebugStub_SendSimpleNumber_Exit
+Ret
+
+DebugStub_SendComplexSingleNumber:
+Push EBP
+Mov EBP, ESP
+Pushad
+
+Mov AL, DebugStub_Const_Ds2Vs_ComplexSingleNumber
+Call DebugStub_ComWriteAL
+
+Mov EAX, [EBP + 8]
+Call DebugStub_ComWriteEAX
+
+Popad
+Pop EBP
+DebugStub_SendComplexSingleNumber_Exit:
+mov dword [static_field__Cosmos_Core_INTs_mLastKnownAddress], DebugStub_SendComplexSingleNumber_Exit
+Ret
+
+DebugStub_SendComplexDoubleNumber:
+Push EBP
+Mov EBP, ESP
+Pushad
+
+Mov AL, DebugStub_Const_Ds2Vs_ComplexDoubleNumber
+Call DebugStub_ComWriteAL
+
+Mov EAX, [EBP + 8]
+Call DebugStub_ComWriteEAX
+Mov EAX, [EBP + 12]
+Call DebugStub_ComWriteEAX
+
+Popad
+Pop EBP
+DebugStub_SendComplexDoubleNumber_Exit:
+mov dword [static_field__Cosmos_Core_INTs_mLastKnownAddress], DebugStub_SendComplexDoubleNumber_Exit
 Ret
 
 DebugStub_SendPtr:

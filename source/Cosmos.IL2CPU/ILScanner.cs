@@ -1,15 +1,15 @@
-﻿using System;
+﻿#define COSMOSDEBUG
+
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Text;
-using Cosmos.IL2CPU;
+
 using Cosmos.IL2CPU.Plugs;
-using Cosmos.IL2CPU.IL;
 using SR = System.Reflection;
 using Cosmos.Assembler;
-using System.Reflection.Emit;
+
 using _MemberInfo = System.Runtime.InteropServices._MemberInfo;
 using SysReflection = System.Reflection;
 
@@ -141,19 +141,6 @@ namespace Cosmos.IL2CPU
             }
         }
 
-        public event Action<string> TempDebug;
-        private void DoTempDebug(string message)
-        {
-            if (TempDebug != null)
-            {
-                TempDebug(message);
-            }
-            else
-            {
-                global::System.Diagnostics.Debug.WriteLine(message);
-            }
-        }
-
         public void Execute(SysReflection.MethodBase aStartMethod)
         {
             if (aStartMethod == null)
@@ -216,7 +203,7 @@ namespace Cosmos.IL2CPU
             mPlugManager.ScanFoundPlugs();
             foreach (var xPlug in mPlugManager.PlugImpls)
             {
-                DoTempDebug(String.Format("Plug found: '{0}'", xPlug.Key.FullName));
+                CompilerHelpers.Debug($"Plug found: '{xPlug.Key.FullName}'");
             }
 
             ILOp.mPlugManager = mPlugManager;
@@ -225,7 +212,6 @@ namespace Cosmos.IL2CPU
             Queue(RuntimeEngineRefs.InitializeApplicationRef, null, "Explicit Entry");
             Queue(RuntimeEngineRefs.FinalizeApplicationRef, null, "Explicit Entry");
             //Queue(typeof(CosmosAssembler).GetMethod("PrintException"), null, "Explicit Entry");
-            Queue(VTablesImplRefs.LoadTypeTableRef, null, "Explicit Entry");
             Queue(VTablesImplRefs.SetMethodInfoRef, null, "Explicit Entry");
             Queue(VTablesImplRefs.IsInstanceRef, null, "Explicit Entry");
             Queue(VTablesImplRefs.SetTypeInfoRef, null, "Explicit Entry");
@@ -277,8 +263,12 @@ namespace Cosmos.IL2CPU
                     xOpMethod.ValueUID = (uint)GetMethodUID(xOpMethod.Value, true);
                     xOpMethod.BaseMethodUID = GetMethodUID(xOpMethod.Value, false);
                 }
+
+                mUsedCodes.Add(xOpCode.OpCode);
             }
         }
+
+        private List<ILOpCode.Code> mUsedCodes = new List<ILOpCode.Code>(128 * 1024);
 
         public void Dispose()
         {
@@ -304,7 +294,7 @@ namespace Cosmos.IL2CPU
                     {
                         var xLogItemText = LogItemText(xList.Key);
 
-                         mLogWriter.WriteLine("<hr>");
+                        mLogWriter.WriteLine("<hr>");
 
                         // Emit bookmarks above source, so when clicking links user doesn't need
                         // to constantly scroll up.
@@ -641,7 +631,7 @@ namespace Cosmos.IL2CPU
                 }
                 if (!aType.IsGenericParameter && xVirt.DeclaringType.IsInterface)
                 {
-                  if ((!aType.IsInterface) && (aType.GetInterfaces().Contains(xVirt.DeclaringType)))
+                    if ((!aType.IsInterface) && (aType.GetInterfaces().Contains(xVirt.DeclaringType)))
                     {
                         var xIntfMapping = aType.GetInterfaceMap(xVirt.DeclaringType);
                         if (xIntfMapping.InterfaceMethods != null && xIntfMapping.TargetMethods != null)
@@ -962,6 +952,18 @@ namespace Cosmos.IL2CPU
                 }
             }
             mAsmblr.GenerateVMTCode(xTypes, xMethods, GetTypeUID, x => GetMethodUID(x, false));
+        }
+
+        public void SaveILInstructions(string filename)
+        {
+            var xUsedCodes = mUsedCodes.Distinct().OrderBy(i => i.ToString()).ToArray();
+            using (var xOut = new StreamWriter(filename, false))
+            {
+                foreach (var xCode in xUsedCodes)
+                {
+                    xOut.WriteLine(xCode.ToString());
+                }
+            }
         }
     }
 }

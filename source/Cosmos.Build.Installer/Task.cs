@@ -2,18 +2,34 @@
 using System.IO;
 using System.Diagnostics;
 using System.Threading;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Cosmos.Build.Installer {
   public abstract class Task {
-    protected abstract void DoRun();
+    protected abstract List<string> DoRun();
 
     public void Run() {
-      try {
-        DoRun();
-      } catch (Exception ex) {
-        Log.NewSection("Error");
-        Log.WriteLine(ex.Message);
+      var exceptions = new List<string>();
+      try
+      {
+          exceptions.AddRange(DoRun());
+      }
+      catch(Exception ex){
+        exceptions.Add(ex.Message);
+        if (ex.InnerException != null){
+            exceptions.Add(ex.InnerException.Message);
+        }
+        exceptions.Add(ex.StackTrace);
+      }
+
+      if (exceptions.Any()) {
         Log.SetError();
+        Log.NewSection("Error");
+        //Collect all the exceptions from the build stage, and list them
+        foreach(var msg in exceptions) {
+          Log.WriteLine(msg);
+        }
       }
     }
 
@@ -80,7 +96,7 @@ namespace Cosmos.Build.Installer {
     public void Start(string aExe, string aParams, bool aWait = true, bool aShowWindow = true) {
       Log.WriteLine("Starting: " + aExe);
       Log.WriteLine("  Params: " + aParams);
-        
+
       using (var xProcess = new Process()) {
         var xPSI = xProcess.StartInfo;
         xPSI.FileName = aExe;

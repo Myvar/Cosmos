@@ -31,14 +31,20 @@ namespace Cosmos.TestRunner.Core
             }
         }
 
+        private void RunExtractMapFromElfFile(string workingDir, string kernelFileName)
+        {
+            ExtractMapFromElfFile.RunObjDump(CosmosPaths.Build, workingDir, kernelFileName, OutputHandler.LogError, OutputHandler.LogMessage);
+        }
+
         private void RunIL2CPU(string kernelFileName, string outputFile)
         {
             var xArguments = new[]
                              {
-                                 "DebugEnabled:True",
-                                 "StackCorruptionDetectionEnabled:False",
+                                 "DebugEnabled:true",
+                                 "StackCorruptionDetectionEnabled:" + EnableStackCorruptionChecks,
+                                 "StackCorruptionDetectionLevel:" + StackCorruptionChecksLevel,
                                  "DebugMode:Source",
-                                 "TraceAssemblies:",
+                                 "TraceAssemblies:" + TraceAssembliesLevel,
                                  "DebugCom:1",
                                  "UseNAsm:True",
                                  "OutputFilename:" + outputFile,
@@ -57,6 +63,8 @@ namespace Cosmos.TestRunner.Core
                 {
                     throw new Exception("Cannot run multiple kernels with in-process compilation!");
                 }
+                // ensure we're using the referenced (= solution) version
+                Assembler.Assembler.ReadDebugStubFromDisk = false;
                 var xResult = Program.Run(xArguments, OutputHandler.LogMessage, OutputHandler.LogError);
                 if (xResult != 0)
                 {
@@ -65,7 +73,6 @@ namespace Cosmos.TestRunner.Core
             }
             else
             {
-
                 RunProcess(typeof(Program).Assembly.Location,
                            mBaseWorkingDirectory,
                            xArguments);

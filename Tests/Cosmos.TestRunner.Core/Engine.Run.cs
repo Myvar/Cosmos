@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using Cosmos.Build.Common;
 using Cosmos.Build.MSBuild;
@@ -13,8 +14,12 @@ namespace Cosmos.TestRunner.Core
 {
     partial class Engine
     {
-        private void ExecuteKernel(string assemblyFileName, RunConfiguration configuration)
+        public int AllowedSecondsInKernel = 30;
+        public List<RunTargetEnum> RunTargets = new List<RunTargetEnum>();
+
+        private bool ExecuteKernel(string assemblyFileName, RunConfiguration configuration)
         {
+            var xResult = true;
             OutputHandler.ExecuteKernelStart(assemblyFileName);
             try
             {
@@ -31,27 +36,44 @@ namespace Cosmos.TestRunner.Core
                     File.Move(xObjectFile, xTempObjectFile);
 
                     RunTask("Ld", () => RunLd(xTempObjectFile, xObjectFile));
+                    RunTask("ExtractMapFromElfFile", () => RunExtractMapFromElfFile(mBaseWorkingDirectory, xObjectFile));
                 }
-
+                var xHarddiskPath = Path.Combine(mBaseWorkingDirectory, "Harddisk.vmdk");
+                var xOriginalHarddiskPath = Path.Combine(GetCosmosUserkitFolder(), "Build", "VMware", "Workstation", "Filesystem.vmdk");
+                File.Copy(xOriginalHarddiskPath, xHarddiskPath);
                 RunTask("MakeISO", () => MakeIso(xObjectFile, xIsoFile));
-                RunTask("RunISOInBochs", () => RunIsoInBochs(xIsoFile));
+                switch (configuration.RunTarget)
+                {
+                    case RunTargetEnum.Bochs:
+                        RunTask("RunISO", () => RunIsoInBochs(xIsoFile, xHarddiskPath));
+                        break;
+                    case RunTargetEnum.VMware:
+                        RunTask("RunISO", () => RunIsoInVMware(xIsoFile, xHarddiskPath));
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException("RunTarget " + configuration.RunTarget + " not implemented!");
+                }
             }
             catch (Exception e)
             {
                 if (!mKernelResultSet)
                 {
                     OutputHandler.SetKernelTestResult(false, e.ToString());
+                    mKernelResult = false;
                 }
                 if (e is TaskFailedException)
                 {
-                    return;
+                    return mKernelResult;
                 }
                 OutputHandler.UnhandledException(e);
             }
             finally
             {
                 OutputHandler.ExecuteKernelEnd(assemblyFileName);
+
             }
+            xResult = mKernelResult;
+            return xResult;
         }
 
 

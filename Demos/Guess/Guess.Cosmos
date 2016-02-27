@@ -15,23 +15,23 @@
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
-    <Profile>VMware</Profile>
+    <Profile>Bochs</Profile>
     <DebugSymbols>true</DebugSymbols>
     <OutputPath>bin\Debug\</OutputPath>
     <Framework>MicrosoftNET</Framework>
     <UseInternalAssembler>False</UseInternalAssembler>
-    <EnableGDB>True</EnableGDB>
-    <DebugMode>Source</DebugMode>
+    <EnableGDB>False</EnableGDB>
+    <DebugMode>IL</DebugMode>
     <TraceMode>User</TraceMode>
     <BuildTarget>PXE</BuildTarget>
     <VMWareFlavor>Player</VMWareFlavor>
-    <StartCosmosGDB>True</StartCosmosGDB>
+    <StartCosmosGDB>False</StartCosmosGDB>
     <VMwareEdition>Workstation</VMwareEdition>
     <VMwareDeploy>ISO</VMwareDeploy>
     <IgnoreDebugStubAttribute>False</IgnoreDebugStubAttribute>
     <Deployment>ISO</Deployment>
-    <Launch>VMware</Launch>
-    <DebugEnabled>True</DebugEnabled>
+    <Launch>Bochs</Launch>
+    <DebugEnabled>False</DebugEnabled>
     <TraceAssemblies>All</TraceAssemblies>
     <PXE_Deployment>PXE</PXE_Deployment>
     <PXE_Launch>None</PXE_Launch>
@@ -82,7 +82,7 @@
     <ISO_EnableGDB>False</ISO_EnableGDB>
     <ISO_StartCosmosGDB>false</ISO_StartCosmosGDB>
     <Name>Guess</Name>
-    <Description>Use VMware Player or Workstation to deploy and debug.</Description>
+    <Description>Use Bochs emulator to deploy and debug.</Description>
     <ISO_Name>User 001</ISO_Name>
     <ISO_Description>Creates a bootable ISO image which can be burned to a DVD. After running the selected project, an explorer window will open containing the ISO file. The ISO file can then be burned to a CD or DVD and used to boot a physical or virtual system.</ISO_Description>
     <USB_Name>Guess</USB_Name>
@@ -136,7 +136,7 @@
     <Bochs_Deployment>ISO</Bochs_Deployment>
     <Bochs_Launch>Bochs</Bochs_Launch>
     <Bochs_ShowLaunchConsole>False</Bochs_ShowLaunchConsole>
-    <Bochs_DebugEnabled>True</Bochs_DebugEnabled>
+    <Bochs_DebugEnabled>False</Bochs_DebugEnabled>
     <Bochs_StackCorruptionDetectionEnabled>True</Bochs_StackCorruptionDetectionEnabled>
     <Bochs_DebugMode>IL</Bochs_DebugMode>
     <Bochs_IgnoreDebugStubAttribute>False</Bochs_IgnoreDebugStubAttribute>
@@ -150,7 +150,7 @@
     <Bochs_TraceAssemblies>All</Bochs_TraceAssemblies>
     <Bochs_EnableGDB>False</Bochs_EnableGDB>
     <Bochs_StartCosmosGDB>False</Bochs_StartCosmosGDB>
-    <EnableBochsDebug>False</EnableBochsDebug>
+    <EnableBochsDebug>True</EnableBochsDebug>
     <Bochs_EnableBochsDebug>True</Bochs_EnableBochsDebug>
     <PXE_StackCorruptionDetectionEnabled>False</PXE_StackCorruptionDetectionEnabled>
     <PXE_EnableBochsDebug>False</PXE_EnableBochsDebug>
@@ -181,23 +181,23 @@
     <USB_EnableBochsDebug>False</USB_EnableBochsDebug>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
-    <Profile>VMware</Profile>
+    <Profile>Bochs</Profile>
     <DebugSymbols>true</DebugSymbols>
     <OutputPath>bin\Debug\</OutputPath>
     <Framework>MicrosoftNET</Framework>
     <UseInternalAssembler>False</UseInternalAssembler>
-    <EnableGDB>True</EnableGDB>
-    <DebugMode>Source</DebugMode>
+    <EnableGDB>False</EnableGDB>
+    <DebugMode>IL</DebugMode>
     <TraceMode>User</TraceMode>
     <BuildTarget>PXE</BuildTarget>
     <VMWareFlavor>Player</VMWareFlavor>
-    <StartCosmosGDB>True</StartCosmosGDB>
+    <StartCosmosGDB>False</StartCosmosGDB>
     <VMwareEdition>Workstation</VMwareEdition>
     <VMwareDeploy>ISO</VMwareDeploy>
     <IgnoreDebugStubAttribute>False</IgnoreDebugStubAttribute>
     <Deployment>ISO</Deployment>
-    <Launch>VMware</Launch>
-    <DebugEnabled>True</DebugEnabled>
+    <Launch>Bochs</Launch>
+    <DebugEnabled>False</DebugEnabled>
     <TraceAssemblies>All</TraceAssemblies>
     <PXE_Deployment>PXE</PXE_Deployment>
     <PXE_Launch>None</PXE_Launch>
@@ -248,7 +248,7 @@
     <ISO_EnableGDB>False</ISO_EnableGDB>
     <ISO_StartCosmosGDB>false</ISO_StartCosmosGDB>
     <Name>Guess</Name>
-    <Description>Use VMware Player or Workstation to deploy and debug.</Description>
+    <Description>Use Bochs emulator to deploy and debug.</Description>
     <ISO_Name>User 001</ISO_Name>
     <ISO_Description>Creates a bootable ISO image which can be burned to a DVD. After running the selected project, an explorer window will open containing the ISO file. The ISO file can then be burned to a CD or DVD and used to boot a physical or virtual system.</ISO_Description>
     <USB_Name>Guess</USB_Name>
@@ -308,7 +308,7 @@
     <Bochs_Deployment>ISO</Bochs_Deployment>
     <Bochs_Launch>Bochs</Bochs_Launch>
     <Bochs_ShowLaunchConsole>False</Bochs_ShowLaunchConsole>
-    <Bochs_DebugEnabled>True</Bochs_DebugEnabled>
+    <Bochs_DebugEnabled>False</Bochs_DebugEnabled>
     <Bochs_StackCorruptionDetectionEnabled>True</Bochs_StackCorruptionDetectionEnabled>
     <Bochs_DebugMode>IL</Bochs_DebugMode>
     <Bochs_IgnoreDebugStubAttribute>False</Bochs_IgnoreDebugStubAttribute>
@@ -322,7 +322,7 @@
     <Bochs_TraceAssemblies>All</Bochs_TraceAssemblies>
     <Bochs_EnableGDB>False</Bochs_EnableGDB>
     <Bochs_StartCosmosGDB>False</Bochs_StartCosmosGDB>
-    <EnableBochsDebug>False</EnableBochsDebug>
+    <EnableBochsDebug>True</EnableBochsDebug>
     <Bochs_EnableBochsDebug>True</Bochs_EnableBochsDebug>
     <PXE_StackCorruptionDetectionEnabled>False</PXE_StackCorruptionDetectionEnabled>
     <PXE_EnableBochsDebug>False</PXE_EnableBochsDebug>

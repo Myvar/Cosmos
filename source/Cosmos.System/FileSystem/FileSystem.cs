@@ -1,43 +1,41 @@
-﻿//using Cosmos.HAL.BlockDevice;
-//using Cosmos.System.FileSystem.FAT;
-//using System;
-//using System.Collections.Generic;
-//using System.Linq;
-//using System.Text;
+﻿using System.Collections.Generic;
+using System.IO;
+using Cosmos.HAL.BlockDevice;
+using Cosmos.System.FileSystem.FAT;
+using Cosmos.System.FileSystem.Listing;
 
-//namespace Cosmos.System.FileSystem
-//{
-//    public enum FileSystemType
-//    {
-//        FAT,
-//        Unknown
-//    }
+namespace Cosmos.System.FileSystem
+{
+    public abstract class FileSystem
+    {
+        protected FileSystem(Partition aDevice, string aRootPath)
+        {
+            mDevice = aDevice;
+            mRootPath = aRootPath;
+        }
 
-//    public class FileSystem
-//    {
-//        // Currently we map to the Windows scheme of single lettter: for drives. Cosmos will 
-//        // NOT do this in the future, but it will be able to map paths to things that look like
-//        // drive letters for compatibility with Windows code.
-//        // For now we use Dictionary for simplicity, but in future this will change.
-//        //static protected Dictionary<string, FileSystem> mMappings = new Dictionary<string, FileSystem>();
+        public static FileSystemType GetFileSystemType(Partition aDevice)
+        {
+            if (FatFileSystem.IsDeviceFAT(aDevice))
+            {
+                return FileSystemType.FAT;
+            }
 
-//        static protected FileSystem mFS;
+            return FileSystemType.Unknown;
+        }
 
-//        static public void AddMapping(string aPath, FileSystem aFileSystem)
-//        {
-//            //mMappings.Add(aPath.ToUpper(), aFileSystem);
-//            // Dictionary<> doesnt work yet, so for now we just hack this and support only one FS
-//            mFS = aFileSystem;
-//        }
+        public abstract void DisplayFileSystemInfo();
 
-//        public static FileSystemType GetFileSystemType(Partition aDevice)
-//        {
-//            if (FatFileSystem.IsDeviceFAT(aDevice))
-//            {
-//                return FileSystemType.FAT;
-//            }
+        public abstract List<DirectoryEntry> GetDirectoryListing(DirectoryEntry baseDirectory);
 
-//            return FileSystemType.Unknown;
-//        }
-//    }
-//}
+        public abstract DirectoryEntry GetRootDirectory();
+
+        public abstract DirectoryEntry CreateDirectory(DirectoryEntry aParentDirectory, string aNewDirectory);
+
+        public abstract DirectoryEntry CreateFile(DirectoryEntry aParentDirectory, string aNewFile);
+
+        protected Partition mDevice { get; }
+
+        public string mRootPath { get; }
+    }
+}
