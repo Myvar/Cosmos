@@ -1,20 +1,61 @@
 ﻿using System;
 using System.Globalization;
+using System.Text;
 
 using Cosmos.Common;
 using Cosmos.IL2CPU.Plugs;
+
+using Debugger = Cosmos.Debug.Kernel.Debugger;
 
 namespace Cosmos.Core.Plugs.System
 {
     [Plug(Target = typeof(string), IsMicrosoftdotNETOnly = true)]
     public static class StringImpl
     {
+        internal static Debugger mDebugger = new Debugger("Core", "String Plugs");
+
         public static unsafe void Ctor(
             string aThis,
-            char[] aChars,
+            char* aChars,
             [FieldAccess(Name = "System.String System.String.Empty")] ref string aStringEmpty,
             [FieldAccess(Name = "System.Int32 System.String.m_stringLength")] ref int aStringLength,
             [FieldAccess(Name = "System.Char System.String.m_firstChar")] char* aFirstChar)
+        {
+            aStringEmpty = "";
+            while (*aChars != '\0')
+            {
+                aChars++;
+                aStringLength++;
+            }
+            for (int i = 0; i < aStringLength; i++)
+            {
+                aFirstChar[i] = aChars[i];
+            }
+        }
+
+        public static unsafe void Ctor(
+            string aThis,
+            char* aChars,
+            int start,
+            int length,
+            [FieldAccess(Name = "System.String System.String.Empty")] ref string aStringEmpty,
+            [FieldAccess(Name = "System.Int32 System.String.m_stringLength")] ref int aStringLength,
+            [FieldAccess(Name = "System.Char System.String.m_firstChar")] char* aFirstChar)
+        {
+            aStringEmpty = "";
+            aStringLength = length;
+            for (int i = 0; i < length; i++)
+            {
+                aFirstChar[i] = aChars[start + i];
+            }
+        }
+
+        public static unsafe void Ctor(
+                    string aThis,
+                    char[] aChars,
+                    [FieldAccess(Name = "System.String System.String.Empty")] ref string aStringEmpty,
+                    [FieldAccess(Name = "System.Int32 System.String.m_stringLength")] ref int aStringLength,
+                    [FieldAccess(Name = "System.Char System.String.m_firstChar")] char* aFirstChar)
         {
             aStringEmpty = "";
             aStringLength = aChars.Length;
@@ -41,6 +82,7 @@ namespace Cosmos.Core.Plugs.System
             }
         }
 
+
         public static unsafe void Ctor(
             string aThis,
             char aChar,
@@ -57,6 +99,7 @@ namespace Cosmos.Core.Plugs.System
             }
         }
 
+
         public static unsafe int get_Length(
             int* aThis,
             [FieldAccess(Name = "System.Int32 System.String.m_stringLength")] ref int aLength)
@@ -64,50 +107,54 @@ namespace Cosmos.Core.Plugs.System
             return aLength;
         }
 
-        public static unsafe char get_Chars(uint* aThis, int aIndex)
+        public static unsafe char get_Chars(
+            uint* aThis,
+            int aIndex,
+            [FieldAccess(Name = "System.Char System.String.m_firstChar")] char* aFirstChar)
         {
-            // todo: change to use a FieldAccessAttribute, to get the pointer to the first character and go from there
-
-            // we first need to dereference the handle to a pointer.
-            uint xActualThis = aThis[0];
-            var xCharIdx = (char*)(xActualThis + 16);
-            return xCharIdx[aIndex];
+            return *(aFirstChar + aIndex);
         }
 
-        public static string Format(string aFormat, object aArg1)
+        public static bool IsAscii(string aThis)
         {
-            if (aArg1 == null)
+            for (int i = 0; i < aThis.Length; i++)
+            {
+                if (aThis[i] >= 0x80)
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        public static string Format(string aFormat, object aArg0)
+        {
+            if (aArg0 == null)
             {
                 throw new ArgumentNullException(aFormat == null ? "aFormat" : "aArgs");
             }
-            var xO = new object[1];
-            xO[0] = aArg1;
-            return FormatHelper(null, aFormat, xO);
+
+            return FormatHelper(null, aFormat, aArg0);
         }
 
-        public static string Format(string aFormat, object aArg1, object aArg2)
+        public static string Format(string aFormat, object aArg0, object aArg1)
         {
-            if ((aArg1 == null) || (aArg2 == null))
+            if (aArg0 == null || aArg1 == null)
             {
                 throw new ArgumentNullException(aFormat == null ? "aFormat" : "aArgs");
             }
-            var xO = new object[2];
-            xO[0] = aArg1;
-            xO[1] = aArg2;
-            return FormatHelper(null, aFormat, xO);
+
+            return FormatHelper(null, aFormat, aArg0, aArg1);
         }
 
-        public static string Format(string aFormat, object aArg1, object aArg2, object aArg3)
+        public static string Format(string aFormat, object aArg0, object aArg1, object aArg2)
         {
-            if ((aArg1 == null) || (aArg2 == null) || (aArg3 == null))
+            if (aArg0 == null || aArg1 == null || aArg2 == null)
             {
                 throw new ArgumentNullException(aFormat == null ? "aFormat" : "aArgs");
             }
-            var xO = new object[3];
-            xO[0] = aArg1;
-            xO[1] = aArg2;
-            xO[2] = aArg3;
-            return FormatHelper(null, aFormat, xO);
+
+            return FormatHelper(null, aFormat, aArg0, aArg1, aArg2);
         }
 
         public static string Format(string aFormat, params object[] aArgs)
@@ -116,25 +163,57 @@ namespace Cosmos.Core.Plugs.System
             {
                 throw new ArgumentNullException(aFormat == null ? "aFormat" : "aArgs");
             }
+
             return FormatHelper(null, aFormat, aArgs);
         }
 
-        public static string Format(IFormatProvider aFormatProvider, string aFormat, params object[] aArgs)
+        public static string Format(IFormatProvider aProvider, string aFormat, object aArg0)
+        {
+            if (aArg0 == null)
+            {
+                throw new ArgumentNullException(aFormat == null ? "aFormat" : "aArgs");
+            }
+
+            return FormatHelper(aProvider, aFormat, aArg0);
+        }
+
+        public static string Format(IFormatProvider aProvider, string aFormat, object aArg0, object aArg1)
+        {
+            if (aArg0 == null | aArg1 == null)
+            {
+                throw new ArgumentNullException(aFormat == null ? "aFormat" : "aArgs");
+            }
+
+            return FormatHelper(aProvider, aFormat, aArg0, aArg1);
+        }
+
+        public static string Format(IFormatProvider aProvider, string aFormat, object aArg0, object aArg1, object aArg2)
+        {
+            if (aArg0 == null | aArg1 == null || aArg2 == null)
+            {
+                throw new ArgumentNullException(aFormat == null ? "aFormat" : "aArgs");
+            }
+
+            return FormatHelper(aProvider, aFormat, aArg0, aArg1, aArg2);
+        }
+
+        public static string Format(IFormatProvider aProvider, string aFormat, params object[] aArgs)
         {
             if (aArgs == null)
             {
                 throw new ArgumentNullException(aFormat == null ? "aFormat" : "aArgs");
             }
-            return FormatHelper(aFormatProvider, aFormat, aArgs);
+
+            return FormatHelper(aProvider, aFormat, aArgs);
         }
 
-        public static string FormatHelper(IFormatProvider aFormatProvider, string aFormat, object[] aArgs)
+        internal static string FormatHelper(IFormatProvider aFormatProvider, string aFormat, params object[] aArgs)
         {
             char[] xCharArray = aFormat.ToCharArray();
-            string xFormattedString = string.Empty;
-            bool xFoundPlaceholder = false;
-            string xParamNumber = string.Empty;
-            bool xParamNumberDone = true;
+            string xFormattedString = string.Empty, xStaticString;
+            bool xFoundPlaceholder = false, xParamNumberDone = true;
+            int xStartParamNumber = -1, xEndParamNumber = -1, xLastPlaceHolder = 0;
+
             for (int i = 0; i < xCharArray.Length; i++)
             {
                 if (xFoundPlaceholder)
@@ -145,163 +224,79 @@ namespace Cosmos.Core.Plugs.System
                     }
                     if (xCharArray[i] == '}')
                     {
+                        mDebugger.SendInternal("Found closing placeholder.");
+                        if (xEndParamNumber < 0)
+                        {
+                            xEndParamNumber = i;
+                        }
+                        string xParamNumber = aFormat.Substring(xStartParamNumber, xEndParamNumber - xStartParamNumber);
+                        mDebugger.SendInternal("Calling StringHelper.GetStringToNumber");
+                        mDebugger.SendInternal(xParamNumber);
                         int xParamIndex = StringHelper.GetStringToNumber(xParamNumber);
-                        if ((xParamIndex < aArgs.Length - 1) && (aArgs[xParamIndex] != null))
+                        mDebugger.SendInternal("Converted paramindex to a number.");
+                        if ((xParamIndex < aArgs.Length) && (aArgs[xParamIndex] != null))
                         {
                             string xParamValue = aArgs[xParamIndex].ToString();
                             xFormattedString = string.Concat(xFormattedString, xParamValue);
                         }
                         xFoundPlaceholder = false;
                         xParamNumberDone = true;
-                        xParamNumber = string.Empty;
+                        xStartParamNumber = -1;
+                        xEndParamNumber = -1;
+                        xLastPlaceHolder = i + 1;
                     }
                     else if (xCharArray[i] == ':')
                     {
                         xParamNumberDone = true;
+                        xEndParamNumber = i;
                         // TODO: Need to handle different formats. (X, N, etc)
                     }
                     else if ((char.IsDigit(xCharArray[i])) && (!xParamNumberDone))
                     {
-                        xParamNumber = string.Concat(xParamNumber, xCharArray[i]);
+                        mDebugger.SendInternal("Getting param number.");
+                        if (xStartParamNumber < 0)
+                        {
+                            xStartParamNumber = i;
+                        }
                     }
                 }
                 else if (xCharArray[i] == '{')
                 {
+                    mDebugger.SendInternal("Found opening placeholder");
+                    xStaticString = aFormat.Substring(xLastPlaceHolder, i - xLastPlaceHolder);
+                    xFormattedString = string.Concat(xFormattedString, xStaticString);
                     xFoundPlaceholder = true;
                     xParamNumberDone = false;
-                    xParamNumber = string.Empty;
-                }
-                else
-                {
-                    xFormattedString = string.Concat(xFormattedString, xCharArray[i]);
                 }
             }
+
+            xStaticString = aFormat.Substring(xLastPlaceHolder, aFormat.Length - xLastPlaceHolder);
+            xFormattedString = string.Concat(xFormattedString, xStaticString);
 
             return xFormattedString;
         }
 
         public static bool StartsWith(string aThis, string aSubstring, StringComparison aComparison)
         {
-            Console.WriteLine("String.StartsWith not working!");
-            throw new NotImplementedException();
-        }
-
-        //String concatenation plugs
-        public static string Concat(string str0)
-        {
-            return str0;
-        }
-
-        public static string Concat(string str0, string str1)
-        {
-            return Concat(new[] { str0, str1 });
-        }
-
-        public static string Concat(string str0, string str1, string str2)
-        {
-            return Concat(new[] { str0, str1, str2 });
-        }
-
-        public static string Concat(string str0, string str1, string str2, string str3)
-        {
-            return Concat(new[] { str0, str1, str2, str3 });
-        }
-
-        //Object concatenation plugs
-        public static string Concat(object obj0)
-        {
-            return obj0?.ToString();
-        }
-
-        public static string Concat(object obj0, object obj1)
-        {
-            return Concat(obj0?.ToString(), obj1?.ToString());
-        }
-
-        public static string Concat(object obj0, object obj1, object obj2)
-        {
-            return Concat(obj0?.ToString(), obj1?.ToString(), obj2?.ToString());
-        }
-
-        public static string Concat(object obj0, object obj1, object obj2, object obj3)
-        {
-            return Concat(new[] { obj0?.ToString(), obj1?.ToString(), obj2?.ToString(), obj3?.ToString() });
-        }
-
-        //Array concatenation plugs
-        public static string Concat(params string[] values)
-        {
-            if (values != null)
+            Char[] di = aThis.ToCharArray();
+            Char[] ci = aSubstring.ToCharArray();
+            if (aSubstring.Length > aThis.Length)
             {
-                int len = 0;
-                for (int i = 0; i < values.Length; i++)
-                {
-                    string xValue = values[i];
-                    if (xValue != null)
-                    {
-                        len += values[i].Length;
-                    }
-                }
-                return ConcatArray(values, len);
+                return false;
             }
-            return string.Empty;
-        }
-
-        public static string Concat(params object[] args)
-        {
-            if (args != null)
+            for (int i = 0; i < ci.Length; i++)
             {
-                var values = new string[args.Length];
-                for (int i = 0; i < args.Length; i++)
+                if (di[i] != ci[i])
                 {
-                    var xArg = args[i];
-                    if (xArg != null)
-                    {
-                        string xStrArg = xArg as string;
-                        if (xStrArg != null)
-                        {
-                            values[i] = xStrArg;
-                        }
-                        else
-                        {
-                            values[i] = xArg.ToString();
-                        }
-                    }
-                }
-                return Concat(values);
-            }
-            return string.Empty;
-        }
+                    return false;
 
-        public static string ConcatArray(string[] values, int totalLength)
-        {
-            if (values != null)
-            {
-                var xResultChars = new char[totalLength];
-                int xCurPos = 0;
-                for (int i = 0; i < values.Length; i++)
-                {
-                    string xStr = values[i];
-                    if (xStr != null)
-                    {
-                        for (int j = 0; j < xStr.Length; j++)
-                        {
-                            xResultChars[xCurPos] = xStr[j];
-                            xCurPos++;
-                        }
-                    }
                 }
-                string xResult = new string(xResultChars);
-                return xResult;
             }
-            return string.Empty;
+            return true;
         }
 
         public static string PadHelper(string aThis, int totalWidth, char paddingChar, bool isRightPadded)
         {
-            //Console.Write("PadHelper, totalWidth = ");
-            //WriteNumber((uint)totalWidth, 32);
-            //Console.WriteLine("");
             var cs = new char[totalWidth];
 
             int pos = aThis.Length;
@@ -330,36 +325,6 @@ namespace Cosmos.Core.Plugs.System
                 {
                     cs[i] = paddingChar;
                 }
-            }
-
-            return new string(cs);
-        }
-
-        public static string Substring(string aThis, int startpos)
-        {
-            var cs = new char[aThis.Length - startpos];
-            int j = 0;
-            for (int i = startpos; i < aThis.Length; i++)
-            {
-                cs[j++] = aThis[i];
-            }
-
-            return new string(cs);
-        }
-
-        public static string Substring(string aThis, int startpos, int length)
-        {
-            if (startpos + length > aThis.Length)
-            {
-                length = aThis.Length - startpos;
-            }
-
-            var cs = new char[length];
-
-            int j = 0;
-            for (int i = startpos; i < startpos + length; i++)
-            {
-                cs[j++] = aThis[i];
             }
 
             return new string(cs);
@@ -490,7 +455,6 @@ namespace Cosmos.Core.Plugs.System
 
         public static int IndexOf(string aThis, string aSubstring, int aIdx, int aLength, StringComparison aComparison)
         {
-            Console.WriteLine("Be aware: IndexOf(..., StringComparison) not fully supported yet!");
             return boyerMooreHorsepool(aSubstring, aThis.Substring(aIdx, aLength));
         }
 
@@ -564,11 +528,36 @@ namespace Cosmos.Core.Plugs.System
 
         public static bool Contains(string aThis, string value)
         {
-            if (aThis.IndexOf(value) != -1)
+            Char[] di = aThis.ToCharArray();
+            Char[] ci = value.ToCharArray();
+            if (value.Length == aThis.Length)
             {
-                return true;
+                if (value == aThis)
+                {
+                    return true;
+                }
+                else
+                {
+                    return false;
+                }
             }
-
+            else if (!(value.Length > aThis.Length) && (value.Length != aThis.Length))
+            {
+                for (int i = 0; i < aThis.Length; i++)
+                {
+                    if (di[i] == ci[0])
+                    {
+                        for (int j = 1; j < value.Length; j++)
+                        {
+                            if (di[i + j] != ci[j])
+                            {
+                                return false;
+                            }
+                        }
+                        return true;
+                    }
+                }
+            }
             return false;
         }
 
@@ -579,30 +568,31 @@ namespace Cosmos.Core.Plugs.System
 
         public static bool EndsWith(string aThis, string aSubStr, StringComparison aComparison)
         {
-            if (aSubStr == null)
+            Char[] di = aThis.ToCharArray();
+            Char[] ci = aSubStr.ToCharArray();
+            if (aThis.Length == aSubStr.Length)
             {
-                throw new ArgumentNullException("aSubStr");
-            }
-
-            if (aThis == aSubStr)
-            {
-                return true;
-            }
-
-            if (aSubStr.Length == 0)
-            {
-                return true;
-            }
-
-            int xLastIdx = aThis.Length - aSubStr.Length;
-            for (int i = 0; i < aSubStr.Length; i++)
-            {
-                if (aThis[xLastIdx + i] != aSubStr[i])
+                if (aThis == aSubStr)
                 {
-                    return false;
+                    return true;
                 }
+                return false;
             }
-            return true;
+            else if (aThis.Length > aSubStr.Length)
+            {
+                return false;
+            }
+            else
+            {
+                for (int i = aThis.Length - aSubStr.Length; i < aThis.Length; i++)
+                {
+                    if (di[aThis.Length - aSubStr.Length + i] != ci[i])
+                    {
+                        return false;
+                    }
+                }
+                return true;
+            }
         }
 
         //        System.Int32  System.String.IndexOf(System.String, System.Int32, System.Int32, System.StringComparison)
@@ -684,21 +674,86 @@ namespace Cosmos.Core.Plugs.System
 
         public static int nativeCompareOrdinalEx(string aStrA, int aIndexA, string aStrB, int aIndexB, int aCount)
         {
-            //Just a basic implementation
-            if (aStrA == aStrB)
+            //mDebugger.SendInternal($"nativeCompareOrdinalEx : aStrA|aIndexA = {aStrA}|{aIndexA}, aStrB|aIndexB = {aStrB}|{aIndexB}, aCount = {aCount}");
+            if (aCount < 0)
             {
+                throw new ArgumentOutOfRangeException("aCount");
+            }
+
+            if (aIndexA < 0 || aIndexA > aStrA.Length)
+            {
+                throw new ArgumentOutOfRangeException("aIndexA");
+            }
+
+            if (aIndexB < 0 || aIndexB > aStrB.Length)
+            {
+                throw new ArgumentOutOfRangeException("aIndexB");
+            }
+
+            if (aStrA == null)
+            {
+                mDebugger.SendInternal("nativeCompareOrdinalEx : aStrA is null");
+                if (aStrB == null)
+                {
+                    mDebugger.SendInternal($"nativeCompareOrdinalEx : aStrB is null");
+                    mDebugger.SendInternal($"nativeCompareOrdinalEx : returning 0");
+                    return 0;
+                }
+                mDebugger.SendInternal($"nativeCompareOrdinalEx : aStrB is not null");
+                mDebugger.SendInternal($"nativeCompareOrdinalEx : returning -1");
+                return -1;
+            }
+            if (aStrB == null)
+            {
+                mDebugger.SendInternal("nativeCompareOrdinalEx : aStrA is not null");
+                mDebugger.SendInternal($"nativeCompareOrdinalEx : aStrB is null");
+                mDebugger.SendInternal($"nativeCompareOrdinalEx : returning 1");
+                return 1;
+            }
+            int xLengthA = Math.Min(aStrA.Length, aCount - aIndexA);
+            int xLengthB = Math.Min(aStrB.Length, aCount - aIndexB);
+            //mDebugger.SendInternal($"nativeCompareOrdinalEx : xLengthA = {xLengthA}");
+            //mDebugger.SendInternal($"nativeCompareOrdinalEx : xLengthB = {xLengthB}");
+
+            if (xLengthA == xLengthB && aIndexA == aIndexB && ReferenceEquals(aStrA, aStrB))
+            {
+                mDebugger.SendInternal("nativeCompareOrdinalEx : xLengthA == xLengthB && aIndexA == aIndexB && aStrA is the same object asaStrB, returning 0");
                 return 0;
             }
-            return -1;
+
+            int xResult = 0;
+            if (xLengthA != xLengthB)
+            {
+                xResult = xLengthA - xLengthB;
+                mDebugger.SendInternal("nativeCompareOrdinalEx : xLengthA != xLengthB, returning " + xResult);
+            }
+
+            for (int i = 0; i < xLengthA; i++)
+            {
+                if (aStrA != aStrB)
+                {
+                    xResult = (byte)aStrA[i] - (byte)aStrB[i];
+                    mDebugger.SendInternal("nativeCompareOrdinalEx : aStrA[i] != aStrB[i], returning " + xResult);
+                    return xResult;
+                }
+            }
+            return xResult;
         }
 
         public static bool StartsWith(string aThis, string aSubStr, bool aIgnoreCase, CultureInfo aCulture)
         {
-            for (int i = 0; i < aSubStr.Length; i++)
+            Char[] di = aThis.ToCharArray();
+            Char[] ci = aSubStr.ToCharArray();
+            if (aSubStr.Length > aThis.Length)
             {
-                if (aThis[i] != aSubStr[i])
+                return false;
+            }
+            for (int i = 0; i < ci.Length; i++)
+            {
+                if (di[i] != ci[i])
                 {
                     return false;
+
                 }
             }
             return true;
@@ -765,16 +820,32 @@ namespace Cosmos.Core.Plugs.System
             return new string(new char[length]);
         }
 
-        /*public int IndexOf(char c)
-       {
-           // TODO: We can't get 'this'
-           //string me = ToString();
-           //for (int i = 0; i < me.Length; i++)
-           //{
-           //    if (me[i] == c)
-           //        return i;
-           //}
-           return -1;
-       }*/
+        public static string TrimStart(string aThis, string aSubStr)
+        {
+            char[] ci = aThis.ToCharArray();
+            char[] di = aSubStr.ToCharArray();
+
+            if (aThis.StartsWith(aSubStr))
+            {
+                if (aThis != aSubStr)
+                {
+                    char[] oi = new char[ci.Length - di.Length];
+                    for (int i = 0; i < ci.Length - di.Length; i++)
+                    {
+                        oi[i] = ci[i + di.Length];
+                    }
+                    return oi.ToString();
+                }
+
+                return string.Empty;
+            }
+
+            throw new ArgumentNullException();
+        }
+
+        public static int GetHashCode(ref String aThis)
+        {
+            throw new NotImplementedException("String.GetHashCode()");
+        }
     }
 }

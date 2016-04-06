@@ -93,10 +93,20 @@ namespace Cosmos.IL2CPU.X86.IL
              * $esp                 Params
              * $esp + mThisOffset   This
              */
+                Type xPopType = aOp.StackPopTypes[0];
+                if ((xPopType.IsPointer || xPopType.IsByRef) && typeof(ValueType).IsAssignableFrom(xPopType.GetElementType()))
+                {
+                    xPopType = xPopType.GetElementType();
+                    string xTypeId = GetTypeIDLabel(xPopType);
+                    new CPUx86.Push { DestinationRef = Cosmos.Assembler.ElementReference.New(xTypeId), DestinationIsIndirect = true };
 
-                new CPUx86.Mov { DestinationReg = CPUx86.Registers.EAX, SourceReg = CPUx86.Registers.ESP, SourceIsIndirect = true, SourceDisplacement = (int)xThisOffset };
-                new CPUx86.Mov { DestinationReg = CPUx86.Registers.EAX, SourceReg = CPUx86.Registers.EAX, SourceIsIndirect = true };
-                new CPUx86.Push { DestinationReg = CPUx86.Registers.EAX, DestinationIsIndirect = true };
+                }
+                else
+                {
+                    new CPUx86.Mov { DestinationReg = CPUx86.Registers.EAX, SourceReg = CPUx86.Registers.ESP, SourceIsIndirect = true, SourceDisplacement = (int)xThisOffset };
+                    new CPUx86.Mov { DestinationReg = CPUx86.Registers.EAX, SourceReg = CPUx86.Registers.EAX, SourceIsIndirect = true };
+                    new CPUx86.Push { DestinationReg = CPUx86.Registers.EAX, DestinationIsIndirect = true };
+                }
                 new CPUx86.Push { DestinationValue = aTargetMethodUID };
                 new CPUx86.Call { DestinationLabel = LabelName.Get(VTablesImplRefs.GetMethodAddressForTypeRef) };
                 if (xExtraStackSize > 0)

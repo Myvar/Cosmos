@@ -10,6 +10,17 @@ namespace Cosmos.Common
 
     public static class StringHelper
     {
+        internal static Debugger mDebugger = new Debugger("Common", "String Helpers");
+
+        internal enum StringComparisonResultEnum
+        {
+            Less = -1,
+
+            Equal = 0,
+
+            Greater = 1
+        }
+
         public static string GetCharArrayString(char[] aArray)
         {
             if (aArray == null)
@@ -31,74 +42,122 @@ namespace Cosmos.Common
             return xString;
         }
 
-        public static string GetNumberString(uint aValue, bool aIsNegative)
+        public static string GetNumberString(uint aValue)
         {
+            string[] xChars = { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9" };
+            string xResult = string.Empty;
+
             if (aValue == 0)
             {
-                if (aIsNegative)
-                {
-                    return "-0";
-                }
-                else
-                {
-                    return "0";
-                }
+                xResult = "0";
             }
-            const string xDigits = "0123456789";
-            char[] xResultChars = new char[11];
-            int xCurrentPos = 10;
-            while (aValue > 0)
+            else
             {
-                byte xPos = (byte)(aValue % 10);
-                aValue /= 10;
-                xResultChars[xCurrentPos] = xDigits[xPos];
-                xCurrentPos -= 1;
+                uint xValue = aValue;
+                while (xValue > 0)
+                {
+                    uint xValue2 = xValue % 10;
+                    xResult = string.Concat(xChars[xValue2], xResult);
+                    xValue /= 10;
+                }
             }
-            if (aIsNegative)
-            {
-                xResultChars[xCurrentPos] = '-';
-                xCurrentPos -= 1;
-            }
-            return new string(xResultChars, xCurrentPos + 1, 10 - xCurrentPos);
+
+            return xResult;
         }
 
         public static string GetNumberString(int aValue)
         {
-            bool xIsNegative = false;
+            string[] xChars = { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9" };
+            string xResult = string.Empty;
+            int xValue = aValue;
+
             if (aValue < 0)
             {
-                xIsNegative = true;
-                aValue *= -1;
+                xValue *= -1;
             }
-            var xResult = GetNumberString((uint)aValue, xIsNegative);
-            if (xResult == null)
+
+            if (aValue == 0)
             {
-                return GetNumberString((uint)aValue, xIsNegative);
+                xResult = string.Concat(xResult, "0");
             }
+            else
+            {
+                while (xValue > 0)
+                {
+                    int xValue2 = xValue % 10;
+                    xResult = string.Concat(xChars[xValue2], xResult);
+                    xValue /= 10;
+                }
+            }
+
+            if (aValue < 0)
+            {
+                xResult = string.Concat("-", xResult);
+            }
+
+            return xResult;
+        }
+
+        public static string GetNumberString(long aValue)
+        {
+            string[] xChars = { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9" };
+            string xResult = string.Empty;
+            long xValue = aValue;
+
+            if (aValue < 0)
+            {
+                xValue *= -1;
+            }
+
+            if (aValue == 0)
+            {
+                xResult = string.Concat(xResult, "0");
+            }
+            else
+            {
+                while (xValue > 0)
+                {
+                    long xValue2 = xValue % 10;
+                    xResult = string.Concat(xChars[xValue2], xResult);
+                    xValue /= 10;
+                }
+            }
+
+            if (aValue < 0)
+            {
+                xResult = string.Concat("-", xResult);
+            }
+
             return xResult;
         }
 
         public static int GetStringToNumber(string aString)
         {
+            bool xIsNegative = false;
             int xNumber = 0;
             if (!string.IsNullOrWhiteSpace(aString))
             {
-                for (int i = aString.Length - 1; i >= 0; i--)
+                char[] xCharArray = aString.ToCharArray();
+                for (int i = 0; i < xCharArray.Length; i++)
                 {
-                    char xC = aString[i];
-                    if (char.IsDigit(xC))
+                    if (char.IsDigit(xCharArray[i]))
                     {
-                        int xValue = xC - '0';
-                        xValue = xValue * (int)Math.Pow(10, i);
+                        int xValue = xCharArray[i] - '0';
+                        int xMax = xCharArray.Length - 1;
+                        for (int j = 0; j < xMax - i; i++)
+                        {
+                            xValue *= 10;
+                        }
+
                         xNumber += xValue;
                     }
-                    else if (xC == '-')
+                    else if (xCharArray[i] == '-')
                     {
-                        xNumber *= -1;
+                        xIsNegative = true;
                     }
-                    else if (xC == '.')
+                    else if (xCharArray[i] == '.')
                     {
-                        return xNumber;
+                        break;
                     }
                     else
                     {
@@ -106,7 +165,44 @@ namespace Cosmos.Common
                     }
                 }
             }
+
+            if (xIsNegative)
+            {
+                xNumber *= -1;
+            }
+
             return xNumber;
+        }
+
+        public static int Compare(
+            string aString1,
+            int aIndex1,
+            string aString2,
+            int aIndex2,
+            int aLength1,
+            int aLength2)
+        {
+            if (aString1.Length < aString2.Length)
+            {
+                return (int)StringComparisonResultEnum.Less;
+            }
+            if (aString1.Length > aString2.Length)
+            {
+                return (int)StringComparisonResultEnum.Greater;
+            }
+
+            for (int i = aString1.Length; i < aString1.Length; i++)
+            {
+                if (aString1[i] < aString2[i])
+                {
+                    return (int)StringComparisonResultEnum.Equal;
+                }
+                if (aString1[i] > aString2[i])
+                {
+                    return (int)StringComparisonResultEnum.Greater;
+                }
+            }
+            return (int)StringComparisonResultEnum.Equal;
         }
     }
 }
