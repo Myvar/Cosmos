@@ -17,7 +17,16 @@ namespace ZorkMachine.Internals
             {
                 _buffer.Add(raw[i]);
             }
-        } 
+        }
+
+        public ZorkStream(byte[] raw, int offset)
+        {
+            for (int i = 0; i < raw.Length; i++)
+            {
+                _buffer.Add(raw[i]);
+            }
+            _index = offset - 1;
+        }
 
         public byte ReadByte()
         {

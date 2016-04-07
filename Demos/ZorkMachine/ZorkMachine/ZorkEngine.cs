@@ -17,6 +17,7 @@ namespace ZorkMachine
         //private
         private int _MemmorySize = 128 * 1000;
         private int _StackSize = 100 * 1000;
+        
 
         private StoryFile _sf;
 
@@ -52,6 +53,8 @@ namespace ZorkMachine
         {
             Console.WriteLine("Opcode at PC:");
             Console.WriteLine(Memmory[ProgramCounter]);
+
+            var x = Opcode.ParseOpcode(new ZorkStream(Memmory, ProgramCounter));
         }
 
     }

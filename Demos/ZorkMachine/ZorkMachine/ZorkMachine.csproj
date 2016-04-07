@@ -11,7 +11,8 @@
     <RootNamespace>ZorkMachine</RootNamespace>
     <AssemblyName>ZorkMachine</AssemblyName>
     <FileAlignment>512</FileAlignment>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -41,6 +42,7 @@
   <ItemGroup>
     <Compile Include="Internals\Header.cs" />
     <Compile Include="Internals\Opcode.cs" />
+    <Compile Include="Internals\Opcodes\Call.cs" />
     <Compile Include="Internals\StoryFile.cs" />
     <Compile Include="Internals\ZorkStream.cs" />
     <Compile Include="Kernel.cs" />
