@@ -10,7 +10,7 @@ namespace ZorkMachine
     public class ZorkEngine
     {
         //public
-        public byte[] Memmory;
+        public ZorkStream Memmory;
         public byte[] Stack;
         public int ProgramCounter = 0;
 
@@ -23,7 +23,7 @@ namespace ZorkMachine
 
         public ZorkEngine()
         {
-            Memmory = new byte[_MemmorySize];
+            Memmory = new ZorkStream(new byte[_MemmorySize]);
             Stack = new byte[_StackSize];
         }
 
@@ -36,7 +36,7 @@ namespace ZorkMachine
 
         public void Reset()
         {
-            Memmory = new byte[_MemmorySize];
+            Memmory = new ZorkStream(new byte[_MemmorySize]);
             Stack = new byte[_StackSize];
         }
 
@@ -44,17 +44,23 @@ namespace ZorkMachine
         {
             _MemmorySize = f.rawData.Length;
             Reset();
-            Memmory = f.rawData;
+            Memmory = new ZorkStream(f.rawData);
             //TODO: load header data       
             ProgramCounter = f.Header.ProgramCounter;
         }
 
         private void Step()
         {
-            Console.WriteLine("Opcode at PC:");
-            Console.WriteLine(Memmory[ProgramCounter]);
+            Memmory._index = ProgramCounter - 1;
 
-            var x = Opcode.ParseOpcode(new ZorkStream(Memmory, ProgramCounter));
+            Console.WriteLine("Opcode at PC:");
+            Console.WriteLine(Memmory.ReadByte(ProgramCounter));
+
+            var x = Opcode.ParseOpcode(Memmory);
+           Console.WriteLine(x.BranchOffset_1);
+
+            ProgramCounter++;
+            //Step();
         }
 
     }

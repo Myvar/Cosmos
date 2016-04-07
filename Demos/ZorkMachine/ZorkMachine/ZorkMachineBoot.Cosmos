@@ -48,6 +48,8 @@
     <Bochs_OutputPath>bin\Debug\</Bochs_OutputPath>
     <Bochs_EnableGDB>False</Bochs_EnableGDB>
     <Bochs_StartCosmosGDB>false</Bochs_StartCosmosGDB>
+    <EnableBochsDebug>False</EnableBochsDebug>
+    <Bochs_EnableBochsDebug>False</Bochs_EnableBochsDebug>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include=".\ZorkMachine.csproj">

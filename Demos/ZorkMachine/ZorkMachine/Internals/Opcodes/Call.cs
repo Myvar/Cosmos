@@ -10,13 +10,17 @@ namespace ZorkMachine.Internals.Opcodes
     {
         public override bool IsMe(byte a)
         {
-            return a == 224;
+            if(a == 224)
+            {
+                return true;
+            }
+            return false;
         }
 
         public override Opcode Parse(ZorkStream z)
         {
             var re = new Call();
-
+            re.BranchOffset_1 = 50;
             return re;
         }
     }
